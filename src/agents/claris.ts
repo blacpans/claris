@@ -8,7 +8,7 @@ import { LlmAgent, Gemini } from '@google/adk';
 
 // Model configuration
 const model = new Gemini({
-  model: process.env.GEMINI_MODEL || 'gemini-1.5-flash-001',
+  model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
   vertexai: true,
   project: process.env.GOOGLE_CLOUD_PROJECT,
   location: process.env.GOOGLE_CLOUD_LOCATION || 'us-central1',
