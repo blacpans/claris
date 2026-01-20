@@ -5,8 +5,8 @@
  */
 import { Hono } from 'hono';
 import { createHmac } from 'crypto';
-import { adkRunner } from './runner';
-import { fetchDiff, getPRDetails, postComment } from '../tools/git/github';
+import { adkRunner } from './runner.js';
+import { fetchDiff, getPRDetails, postComment } from '../tools/git/github.js';
 
 export const webhookApp = new Hono();
 

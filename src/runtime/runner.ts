@@ -5,8 +5,8 @@
  * and provides a simple interface to execute agent turns from webhook handlers.
  */
 import { InMemoryRunner } from '@google/adk';
-import { clarisAgent } from '../agents/claris';
-import { FirestoreSessionService } from '../sessions/firestoreSession';
+import { clarisAgent } from '../agents/claris.js';
+import { FirestoreSessionService } from '../sessions/firestoreSession.js';
 
 // Re-export FirestoreSessionService for compatibility with ADK Runner
 // Note: InMemoryRunner uses InMemorySessionService by default,

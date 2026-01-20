@@ -3,7 +3,7 @@
  *
  * These tools allow Claris to interact with GitHub PRs and Issues.
  */
-import { getGitHubClient, parseRepo } from './client';
+import { getGitHubClient, parseRepo } from './client.js';
 
 // Tool input/output types
 interface FetchDiffInput {

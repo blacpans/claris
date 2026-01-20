@@ -2,8 +2,8 @@
  * Hono Server - Minimal runtime for Claris
  */
 import { Hono } from 'hono';
-import { adkRunner } from './runner';
-import { webhookApp } from './webhook';
+import { adkRunner } from './runner.js';
+import { webhookApp } from './webhook.js';
 
 export const app = new Hono();
 

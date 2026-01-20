@@ -3,7 +3,7 @@
  * Entry point for the application
  */
 import { serve } from '@hono/node-server';
-import { app } from './runtime/server';
+import { app } from './runtime/server.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 
