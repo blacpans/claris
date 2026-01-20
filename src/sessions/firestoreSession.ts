@@ -42,7 +42,7 @@ export class FirestoreSessionService {
       .collection(this.collectionName)
       .doc(this.buildDocId(request.appName, request.userId, sessionId));
 
-    await docRef.set(session);
+    await docRef.set(this.removeUndefined(session));
     console.log(`[Firestore] Created session: ${sessionId}`);
     return session;
   }
@@ -126,7 +126,7 @@ export class FirestoreSessionService {
     } as Event;
 
     await docRef.update({
-      events: FieldValue.arrayUnion(eventWithTimestamp),
+      events: FieldValue.arrayUnion(this.removeUndefined(eventWithTimestamp)),
       lastUpdateTime: Date.now(),
     });
 
@@ -145,5 +145,25 @@ export class FirestoreSessionService {
    */
   private generateId(): string {
     return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  /**
+   * Recursively removes undefined values from an object
+   */
+  private removeUndefined<T>(obj: T): T {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) {
+      return obj.map((v) => this.removeUndefined(v)) as unknown as T;
+    }
+    if (typeof obj === 'object') {
+      const result: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          result[key] = this.removeUndefined(value);
+        }
+      }
+      return result;
+    }
+    return obj;
   }
 }
