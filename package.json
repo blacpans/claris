@@ -23,6 +23,7 @@
     "@google-cloud/firestore": "^8.2.0",
     "@google/adk": "^0.2.0",
     "@hono/node-server": "^1.14.1",
+    "@octokit/rest": "^22.0.1",
     "hono": "^4.7.4"
   },
   "devDependencies": {
