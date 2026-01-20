@@ -20,7 +20,7 @@ export class FirestoreSessionService {
   private readonly collectionName: string;
 
   constructor(options?: { collectionName?: string }) {
-    this.db = new Firestore();
+    this.db = new Firestore({ ignoreUndefinedProperties: true });
     this.collectionName = options?.collectionName || 'claris-sessions';
   }
 
