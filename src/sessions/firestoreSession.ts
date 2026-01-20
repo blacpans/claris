@@ -43,6 +43,7 @@ export class FirestoreSessionService {
       .doc(this.buildDocId(request.appName, request.userId, sessionId));
 
     await docRef.set(session);
+    console.log(`[Firestore] Created session: ${sessionId}`);
     return session;
   }
 
