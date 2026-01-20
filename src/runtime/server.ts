@@ -2,6 +2,7 @@
  * Hono Server - Minimal runtime for Claris
  */
 import { Hono } from 'hono';
+import { adkRunner } from './runner';
 
 export const app = new Hono();
 
@@ -14,8 +15,39 @@ app.get('/', (c) => {
   });
 });
 
-// Webhook endpoint (to be implemented)
+// Chat endpoint (for testing)
+app.post('/chat', async (c) => {
+  try {
+    const body = await c.req.json<{ userId?: string; sessionId?: string; message: string }>();
+
+    if (!body.message) {
+      return c.json({ error: 'message is required' }, 400);
+    }
+
+    const userId = body.userId || 'anonymous';
+    const sessionId = body.sessionId || `session-${Date.now()}`;
+
+    const response = await adkRunner.run({
+      userId,
+      sessionId,
+      message: body.message,
+    });
+
+    return c.json({
+      userId,
+      sessionId,
+      response,
+    });
+  } catch (error) {
+    console.error('Chat error:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+// Webhook endpoint (for GitHub/Forgejo integration)
 app.post('/webhook', async (c) => {
-  // TODO: Implement webhook handling with ADK Runner
+  // TODO: Implement webhook handling with proper event parsing
+  const payload = await c.req.json();
+  console.log('Webhook received:', JSON.stringify(payload).slice(0, 200));
   return c.json({ received: true });
 });
