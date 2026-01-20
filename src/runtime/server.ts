@@ -3,6 +3,7 @@
  */
 import { Hono } from 'hono';
 import { adkRunner } from './runner';
+import { webhookApp } from './webhook';
 
 export const app = new Hono();
 
@@ -44,10 +45,5 @@ app.post('/chat', async (c) => {
   }
 });
 
-// Webhook endpoint (for GitHub/Forgejo integration)
-app.post('/webhook', async (c) => {
-  // TODO: Implement webhook handling with proper event parsing
-  const payload = await c.req.json();
-  console.log('Webhook received:', JSON.stringify(payload).slice(0, 200));
-  return c.json({ received: true });
-});
+// Mount webhook handler
+app.route('/webhook', webhookApp);
