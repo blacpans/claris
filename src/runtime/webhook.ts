@@ -90,35 +90,64 @@ ${diff.slice(0, 100000)}${diff.length > 100000 ? '\n... (差分が長いため�
 \`\`\`
 
 このPRをレビューして、問題点や改善提案があればコメントを作成してね。
-問題なければ「LGTM！」と言ってOK。
+
+# 重要: 出力フォーマット
+必ず以下の **JSONフォーマット** で出力して！マークダウンのコードブロックで囲むこと。
+
+\`\`\`json
+{
+  "status": "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
+  "comment": "レビューコメントの内容（Markdown形式）"
+}
+\`\`\`
+
+- **APPROVE**: 問題がなく、すぐにマージできる場合（LGTM）
+- **REQUEST_CHANGES**: 修正が必要な問題（バグ、セキュリティリスク、設計ミスなど）がある場合
+- **COMMENT**: 質問や提案のみで、マージをブロックする必要がない場合
 `;
 
     // Run Claris agent to analyze the PR
     console.log('🤖 Asking Claris to review...');
-    const reviewComment = await adkRunner.run({
+    const aiResponse = await adkRunner.run({
       userId: 'github-webhook',
       sessionId: `pr-${repo.replace('/', '-')}-${prNumber}`,
       message: prompt,
     });
 
-    // Determine if LGTM (approve) or needs changes
-    const isApproved = reviewComment.toLowerCase().includes('lgtm');
-    const reviewEvent = isApproved ? 'APPROVE' : 'COMMENT';
-    const labels = isApproved ? ['approved'] : ['needs-review'];
+    // Parse AI response
+    let reviewData: { status: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'; comment: string };
+    try {
+      // Extract JSON from code block
+      const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/) || aiResponse.match(/```\n([\s\S]*?)\n```/);
+      const jsonString = (jsonMatch && jsonMatch[1]) ? jsonMatch[1] : aiResponse;
+      reviewData = JSON.parse(jsonString);
+    } catch (e) {
+      console.error('❌ Failed to parse AI response as JSON:', e);
+      // Fallback: treat as comment
+      reviewData = { status: 'COMMENT', comment: aiResponse };
+    }
+
+    // Determine event and labels
+    const reviewEvent = reviewData.status as 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+    let labels: string[] = [];
+    if (reviewEvent === 'APPROVE') labels = ['approved'];
+    if (reviewEvent === 'REQUEST_CHANGES') labels = ['needs-review'];
 
     // Create the review with proper status
-    console.log(`� Creating review (${reviewEvent})...`);
+    console.log(`📝 Creating review (${reviewEvent})...`);
     const reviewResult = await createReview({
       repo,
       prNumber,
       event: reviewEvent,
-      body: `## 🌸 Claris Review\n\n${reviewComment}`,
+      body: `## 🌸 Claris Review\n\n${reviewData.comment}`,
     });
     console.log('✅ Review created:', reviewResult);
 
     // Add labels
-    console.log(`🏷️ Adding labels: ${labels.join(', ')}...`);
-    await addLabels({ repo, prNumber, labels });
+    if (labels.length > 0) {
+      console.log(`🏷️ Adding labels: ${labels.join(', ')}...`);
+      await addLabels({ repo, prNumber, labels });
+    }
 
     return reviewResult;
   } catch (error) {
@@ -136,7 +165,7 @@ webhookApp.post('/', async (c) => {
   const signature = c.req.header('X-Hub-Signature-256');
   const rawBody = await c.req.text();
 
-  console.log(`🔔 Webhook received: ${eventType}`);
+  console.log(`🔔 Webhook received: ${eventType || 'unknown'}`);
 
   // Verify signature
   if (!verifySignature(rawBody, signature)) {
