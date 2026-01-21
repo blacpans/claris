@@ -15,7 +15,7 @@
 | **本番URL** | https://claris.blacpans.net |
 | **Webhook URL** | `https://claris.blacpans.net/webhook` |
 | **Cloud Run** | `claris-647030459554.us-central1.run.app` |
-| **GCPプロジェクト** | `upheld-beach-482910-e6` |
+| **GCPプロジェクト** | `<YOUR_PROJECT_ID>` |
 
 ---
 
@@ -58,7 +58,7 @@ graph LR
 
 | 変数名 | 値 |
 |:-------|:---|
-| `GOOGLE_CLOUD_PROJECT` | `upheld-beach-482910-e6` |
+| `GOOGLE_CLOUD_PROJECT` | `<YOUR_PROJECT_ID>` |
 | `GOOGLE_CLOUD_LOCATION` | `global` ⚠️ gemini-3-pro-preview に必須 |
 
 ### IAM 権限 (Service Account: `647030459554-compute@developer.gserviceaccount.com`)
@@ -106,5 +106,5 @@ cd ~/ghq/github.com/blacpans/claris
 ## 🔗 関連リソース
 
 - [PR #1](https://github.com/blacpans/claris/pull/1) - テスト用PR (Clarisのレビューコメントあり)
-- [Cloud Run Console](https://console.cloud.google.com/run/detail/us-central1/claris/metrics?project=upheld-beach-482910-e6)
-- [Cloud Logging](https://console.cloud.google.com/logs/query?project=upheld-beach-482910-e6)
+- [Cloud Run Console](https://console.cloud.google.com/run/detail/us-central1/claris/metrics?project=<YOUR_PROJECT_ID>)
+- [Cloud Logging](https://console.cloud.google.com/logs/query?project=<YOUR_PROJECT_ID>)
