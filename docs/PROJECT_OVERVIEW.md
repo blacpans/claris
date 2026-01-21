@@ -52,6 +52,7 @@ graph LR
 |:---------------|:-----|
 | `GITHUB_TOKEN` | GitHub PAT (`repo` scope) |
 | `GEMINI_MODEL` | `gemini-3-pro-preview` (version 4) |
+| `GITHUB_WEBHOOK_SECRET` | Webhook署名検証用シークレット |
 
 ### Cloud Run 環境変数
 
@@ -78,7 +79,7 @@ graph LR
 
 ## 🚀 今後の改善タスク
 
-- [ ] Webhook Secret 設定 (`GITHUB_WEBHOOK_SECRET`) - セキュリティ強化
+- [x] ~~Webhook Secret 設定 (`GITHUB_WEBHOOK_SECRET`) - セキュリティ強化~~ ✅
 - [ ] Cloud Tasks / Pub/Sub でバックグラウンド処理を堅牢化
 - [ ] Line-by-line コメント機能 (`POST /repos/{owner}/{repo}/pulls/{pull_number}/comments`)
 - [ ] エラーハンドリング改善 (Slack/Discord 通知)
@@ -96,7 +97,7 @@ gcloud run deploy claris \
   --project upheld-beach-482910-e6 \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-secrets "GITHUB_TOKEN=GITHUB_TOKEN:latest,GEMINI_MODEL=GEMINI_MODEL:latest" \
+  --set-secrets "GITHUB_TOKEN=GITHUB_TOKEN:latest,GEMINI_MODEL=GEMINI_MODEL:latest,GITHUB_WEBHOOK_SECRET=GITHUB_WEBHOOK_SECRET:latest" \
   --set-env-vars "GOOGLE_CLOUD_PROJECT=upheld-beach-482910-e6,GOOGLE_CLOUD_LOCATION=global"
 ```
 
