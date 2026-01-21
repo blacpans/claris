@@ -24,3 +24,7 @@ npm-debug.log*
 
 # Test
 coverage/
+
+# Documentation (Local & Private)
+docs/daily/
+docs/SECRET_INFO.md
