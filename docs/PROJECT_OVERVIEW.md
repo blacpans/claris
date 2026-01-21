@@ -92,14 +92,14 @@ graph LR
 ```bash
 cd ~/ghq/github.com/blacpans/claris
 
-gcloud run deploy claris \
-  --source . \
-  --project upheld-beach-482910-e6 \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-secrets "GITHUB_TOKEN=GITHUB_TOKEN:latest,GEMINI_MODEL=GEMINI_MODEL:latest,GITHUB_WEBHOOK_SECRET=GITHUB_WEBHOOK_SECRET:latest" \
-  --set-env-vars "GOOGLE_CLOUD_PROJECT=upheld-beach-482910-e6,GOOGLE_CLOUD_LOCATION=global"
+# GOOGLE_CLOUD_PROJECT が環境変数で設定されていること
+./deploy/deploy.sh
 ```
+
+> **Note**: 初回デプロイ時は Secret Manager に以下のシークレットを作成しておくこと:
+> - `GITHUB_TOKEN`
+> - `GEMINI_MODEL`
+> - `GITHUB_WEBHOOK_SECRET`
 
 ---
 
