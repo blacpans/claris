@@ -30,7 +30,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --project "$PROJECT_ID" \
   --allow-unauthenticated \
   --set-env-vars "GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION" \
-  --set-secrets "GITHUB_TOKEN=GITHUB_TOKEN:latest,GEMINI_MODEL=GEMINI_MODEL:latest" \
+  --set-secrets "GITHUB_TOKEN=GITHUB_TOKEN:latest,GEMINI_MODEL=GEMINI_MODEL:latest,GITHUB_WEBHOOK_SECRET=GITHUB_WEBHOOK_SECRET:latest" \
   --memory 512Mi \
   --timeout 300 \
   --concurrency 80 \

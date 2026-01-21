@@ -10,17 +10,21 @@ import { fetchDiff, getPRDetails, postComment } from '../tools/git/github.js';
 
 export const webhookApp = new Hono();
 
-// Webhook secret for signature verification (optional but recommended)
-const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET;
+// Webhook secret for signature verification (REQUIRED)
+const webhookSecretEnv = process.env.GITHUB_WEBHOOK_SECRET;
+
+// Validate at module load time - fail fast if secret is not configured
+if (!webhookSecretEnv) {
+  throw new Error('GITHUB_WEBHOOK_SECRET is required for webhook signature verification');
+}
+
+// After validation, we know this is a string
+const WEBHOOK_SECRET: string = webhookSecretEnv;
 
 /**
  * Verifies the GitHub webhook signature
  */
 function verifySignature(payload: string, signature: string | undefined): boolean {
-  if (!WEBHOOK_SECRET) {
-    // If no secret is configured, skip verification (not recommended for production)
-    return true;
-  }
   if (!signature) {
     return false;
   }
