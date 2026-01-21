@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import { createHmac } from 'crypto';
 import { adkRunner } from './runner.js';
-import { fetchDiff, getPRDetails, postComment } from '../tools/git/github.js';
+import { fetchDiff, getPRDetails, postComment, addReviewer, createReview, addLabels } from '../tools/git/github.js';
 
 export const webhookApp = new Hono();
 
@@ -60,6 +60,12 @@ async function handlePullRequestEvent(
   }
 
   try {
+    // Add claris-bot as reviewer (only on opened)
+    if (action === 'opened') {
+      console.log('👥 Adding claris-bot as reviewer...');
+      await addReviewer({ repo, prNumber, reviewer: 'claris-bot' });
+    }
+
     // Fetch PR diff
     console.log('📄 Fetching diff...');
     const diff = await fetchDiff({ repo, prNumber });
@@ -80,7 +86,7 @@ GitHub PRレビュー依頼が来たよ！
 
 ## 差分 (Diff)
 \`\`\`diff
-${diff.slice(0, 10000)}${diff.length > 10000 ? '\n... (差分が長いため省略)' : ''}
+${diff.slice(0, 100000)}${diff.length > 100000 ? '\n... (差分が長いため省略)' : ''}
 \`\`\`
 
 このPRをレビューして、問題点や改善提案があればコメントを作成してね。
@@ -95,16 +101,26 @@ ${diff.slice(0, 10000)}${diff.length > 10000 ? '\n... (差分が長いため省�
       message: prompt,
     });
 
-    // Post the review comment to the PR
-    console.log('💬 Posting review comment...');
-    const result = await postComment({
+    // Determine if LGTM (approve) or needs changes
+    const isApproved = reviewComment.toLowerCase().includes('lgtm');
+    const reviewEvent = isApproved ? 'APPROVE' : 'COMMENT';
+    const labels = isApproved ? ['approved'] : ['needs-review'];
+
+    // Create the review with proper status
+    console.log(`� Creating review (${reviewEvent})...`);
+    const reviewResult = await createReview({
       repo,
       prNumber,
+      event: reviewEvent,
       body: `## 🌸 Claris Review\n\n${reviewComment}`,
     });
+    console.log('✅ Review created:', reviewResult);
 
-    console.log('✅ Review posted:', result);
-    return result;
+    // Add labels
+    console.log(`🏷️ Adding labels: ${labels.join(', ')}...`);
+    await addLabels({ repo, prNumber, labels });
+
+    return reviewResult;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('❌ Error processing PR:', errorMessage);
