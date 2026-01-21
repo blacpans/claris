@@ -76,6 +76,7 @@ export class AdkRunnerService {
     for await (const event of events) {
       // Store event in Firestore for persistence
       if (session) {
+        console.log(`[Runner] Event: ${JSON.stringify(event)}`);
         await this.sessionService.appendEvent({
           session,
           event: event as any,
