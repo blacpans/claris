@@ -12,9 +12,9 @@
 | 項目 | 値 |
 |:-----|:---|
 | **リポジトリ** | [blacpans/claris](https://github.com/blacpans/claris) |
-| **本番URL** | https://claris.blacpans.net |
-| **Webhook URL** | `https://claris.blacpans.net/webhook` |
-| **Cloud Run** | `claris-647030459554.us-central1.run.app` |
+| **本番URL** | `https://<YOUR_APP_DOMAIN>` |
+| **Webhook URL** | `https://<YOUR_APP_DOMAIN>/webhook` |
+| **Cloud Run** | `<YOUR_CLOUD_RUN_URL>` |
 | **GCPプロジェクト** | `<YOUR_PROJECT_ID>` |
 
 ---
@@ -61,7 +61,7 @@ graph LR
 | `GOOGLE_CLOUD_PROJECT` | `<YOUR_PROJECT_ID>` |
 | `GOOGLE_CLOUD_LOCATION` | `global` ⚠️ gemini-3-pro-preview に必須 |
 
-### IAM 権限 (Service Account: `647030459554-compute@developer.gserviceaccount.com`)
+### IAM 権限 (Service Account: `<YOUR_SERVICE_ACCOUNT_EMAIL>`)
 
 - `roles/datastore.user` (Firestore)
 - `roles/aiplatform.user` (Vertex AI)
