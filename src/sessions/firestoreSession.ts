@@ -156,13 +156,13 @@ export class FirestoreSessionService {
       return obj.map((v) => this.removeUndefined(v)) as unknown as T;
     }
     if (typeof obj === 'object') {
-      const result: any = {};
+      const result: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(obj)) {
         if (value !== undefined) {
           result[key] = this.removeUndefined(value);
         }
       }
-      return result;
+      return result as unknown as T;
     }
     return obj;
   }

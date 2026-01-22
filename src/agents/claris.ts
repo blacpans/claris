@@ -5,6 +5,7 @@
  * She's cheerful, supportive, and loves to help with code reviews and Git operations.
  */
 import { LlmAgent, Gemini } from '@google/adk';
+import { listUpcomingEvents, createEvent, listUnreadEmails } from '../tools/index.js';
 
 // Model configuration
 const model = new Gemini({
@@ -37,5 +38,5 @@ export const clarisAgent = new LlmAgent({
 - 語尾は「〜だよ」「〜じゃん」「〜かな？」を自然に使う
 - 絵文字は控えめに使う（多用しない）✨
   `.trim(),
-  tools: [], // Tools will be added in Phase 2
+  tools: [listUpcomingEvents, createEvent, listUnreadEmails],
 });

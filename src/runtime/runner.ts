@@ -79,7 +79,7 @@ export class AdkRunnerService {
         console.log(`[Runner] Event: ${JSON.stringify(event)}`);
         await this.sessionService.appendEvent({
           session,
-          event: event as any,
+          event,
         });
       }
 

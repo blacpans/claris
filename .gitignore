@@ -28,3 +28,7 @@ coverage/
 # Documentation (Local & Private)
 docs/daily/
 docs/SECRET_INFO.md
+
+# Google Auth
+.gemini/tokens.json
+credentials.json
