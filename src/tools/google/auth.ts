@@ -124,6 +124,7 @@ export async function getAuthUrl(): Promise<string> {
   return client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
+    prompt: 'consent', // 再認証時もrefresh_tokenを確実に取得
   });
 }
 
