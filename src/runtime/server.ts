@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
-import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
+import { getAuthUrl, handleAuthCallback } from '../tools/google/auth.js';
 
 export const app = new Hono();
 
