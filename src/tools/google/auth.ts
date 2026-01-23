@@ -147,10 +147,15 @@ export async function getAuthUrl(state?: string): Promise<string> {
  * @param code - Google から返ってきた認証コード
  */
 export async function handleAuthCallback(code: string): Promise<void> {
-  const client = createOAuth2Client();
-  const { tokens } = await client.getToken(code);
-  client.setCredentials(tokens);
-  await saveCredentials(client);
+  try {
+    const client = createOAuth2Client();
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
+    await saveCredentials(client);
+  } catch (error) {
+    console.error('Failed to exchange code for tokens:', error);
+    throw new Error('Failed to complete authentication process');
+  }
 }
 
 /**
