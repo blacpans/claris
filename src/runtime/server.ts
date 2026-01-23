@@ -4,6 +4,7 @@
 import { Hono } from 'hono';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
+import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
 
 export const app = new Hono();
 
@@ -14,6 +15,42 @@ app.get('/', (c) => {
     status: 'online',
     message: 'Hello! Claris is ready to help! 🌸',
   });
+});
+
+// Google OAuth: 認証開始エンドポイント
+app.get('/auth/google', async (c) => {
+  try {
+    const authUrl = await getAuthUrl();
+    return c.redirect(authUrl);
+  } catch (error) {
+    console.error('Auth URL generation error:', error);
+    return c.json({ error: 'Failed to generate auth URL' }, 500);
+  }
+});
+
+// Google OAuth: コールバックエンドポイント
+app.get('/oauth2callback', async (c) => {
+  try {
+    const code = c.req.query('code');
+    if (!code) {
+      return c.json({ error: 'No authorization code provided' }, 400);
+    }
+
+    await handleAuthCallback(code);
+    return c.html(`
+      <html>
+        <head><title>Authentication Successful</title></head>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>✨ Authentication Successful! ✨</h1>
+          <p>Google Workspace との連携が完了したよ！🌸</p>
+          <p>このタブは閉じて大丈夫だよ！</p>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    return c.json({ error: 'Authentication failed' }, 500);
+  }
 });
 
 // Chat endpoint (for testing)
@@ -47,3 +84,4 @@ app.post('/chat', async (c) => {
 
 // Mount webhook handler
 app.route('/webhook', webhookApp);
+
