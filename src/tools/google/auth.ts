@@ -63,7 +63,7 @@ async function loadCredentials(): Promise<{ client_id: string; client_secret: st
  * 環境変数 GOOGLE_REDIRECT_URI がなければデフォルト値を使用
  */
 function getRedirectUri(): string {
-  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback';
+  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8080/oauth2callback';
 }
 
 /**
