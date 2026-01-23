@@ -1,5 +1,4 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { Firestore } from '@google-cloud/firestore';
 import { google, Auth } from 'googleapis';
 
 const SCOPES = [
@@ -7,8 +6,17 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
 ];
 
-const TOKEN_PATH = path.join(process.cwd(), '.gemini', 'tokens.json');
-const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
+const CREDENTIALS_COLLECTION = 'google-credentials';
+
+// Firestore インスタンス（遅延初期化）
+let db: Firestore | null = null;
+
+function getFirestore(): Firestore {
+  if (!db) {
+    db = new Firestore({ ignoreUndefinedProperties: true });
+  }
+  return db;
+}
 
 /**
  * Type Guard for OAuth2Client
@@ -25,12 +33,28 @@ function isJWT(client: unknown): client is Auth.JWT {
 }
 
 /**
- * Reads previously authorized credentials from the save file.
+ * 保存されたトークン情報の型
+ */
+interface SavedCredentials {
+  type: 'authorized_user';
+  client_id: string;
+  client_secret: string;
+  refresh_token: string;
+}
+
+/**
+ * Firestoreからトークンを読み込む
  */
 async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Client | null> {
   try {
-    const content = await fs.readFile(TOKEN_PATH, 'utf-8');
-    const credentials = JSON.parse(content);
+    const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    const credentials = doc.data() as SavedCredentials;
     const client = google.auth.fromJSON(credentials);
 
     if (isOAuth2Client(client) || isJWT(client)) {
@@ -43,19 +67,20 @@ async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Clie
 }
 
 /**
- * クレデンシャルファイル（credentials.json）を読み込む
+ * 環境変数からクレデンシャルを読み込む
  */
-async function loadCredentials(): Promise<{ client_id: string; client_secret: string }> {
-  try {
-    const content = await fs.readFile(CREDENTIALS_PATH, 'utf-8');
-    const keys = JSON.parse(content);
-    const key = keys.installed || keys.web;
-    return { client_id: key.client_id, client_secret: key.client_secret };
-  } catch {
+function loadCredentials(): { client_id: string; client_secret: string } {
+  const client_id = process.env.GOOGLE_CLIENT_ID;
+  const client_secret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!client_id || !client_secret) {
     throw new Error(
-      `Error loading ${CREDENTIALS_PATH}. Please make sure you have downloaded the OAuth 2.0 credentials from Google Cloud Console.`
+      'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables are required. ' +
+      'Set them in .env or configure via Secret Manager for Cloud Run.'
     );
   }
+
+  return { client_id, client_secret };
 }
 
 /**
@@ -69,32 +94,33 @@ function getRedirectUri(): string {
 /**
  * OAuth2 クライアントを生成する
  */
-async function createOAuth2Client(): Promise<Auth.OAuth2Client> {
-  const { client_id, client_secret } = await loadCredentials();
+function createOAuth2Client(): Auth.OAuth2Client {
+  const { client_id, client_secret } = loadCredentials();
   return new google.auth.OAuth2(client_id, client_secret, getRedirectUri());
 }
 
 /**
- * Serializes credentials to a file compatible with GoogleAuth.fromJSON.
+ * トークンをFirestoreに保存する
  */
 async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
-  const { client_id, client_secret } = await loadCredentials();
-  const payload = JSON.stringify({
+  const { client_id, client_secret } = loadCredentials();
+  const payload: SavedCredentials = {
     type: 'authorized_user',
     client_id,
     client_secret,
-    refresh_token: client.credentials.refresh_token,
-  });
+    refresh_token: client.credentials.refresh_token as string,
+  };
 
-  await fs.mkdir(path.dirname(TOKEN_PATH), { recursive: true });
-  await fs.writeFile(TOKEN_PATH, payload);
+  const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
+  await docRef.set(payload);
+  console.log('[Firestore] Saved Google OAuth credentials');
 }
 
 /**
  * 認証用URLを生成する（サーバーサイドフロー用）
  */
 export async function getAuthUrl(): Promise<string> {
-  const client = await createOAuth2Client();
+  const client = createOAuth2Client();
   return client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
@@ -106,7 +132,7 @@ export async function getAuthUrl(): Promise<string> {
  * @param code - Google から返ってきた認証コード
  */
 export async function handleAuthCallback(code: string): Promise<void> {
-  const client = await createOAuth2Client();
+  const client = createOAuth2Client();
   const { tokens } = await client.getToken(code);
   client.setCredentials(tokens);
   await saveCredentials(client);
