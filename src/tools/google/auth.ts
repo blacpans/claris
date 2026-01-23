@@ -131,13 +131,15 @@ async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
 /**
  * 認証用URLを生成する（サーバーサイドフロー用）
  */
-export async function getAuthUrl(): Promise<string> {
+export async function getAuthUrl(state?: string): Promise<string> {
   const client = createOAuth2Client();
-  return client.generateAuthUrl({
+  const opts = {
     access_type: 'offline',
     scope: SCOPES,
     prompt: 'consent', // 再認証時もrefresh_tokenを確実に取得
-  });
+    ...(state ? { state } : {}),
+  };
+  return client.generateAuthUrl(opts);
 }
 
 /**

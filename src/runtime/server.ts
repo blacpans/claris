@@ -20,7 +20,11 @@ app.get('/', (c) => {
 // Google OAuth: 認証開始エンドポイント
 app.get('/auth/google', async (c) => {
   try {
-    const authUrl = await getAuthUrl();
+    const secret = c.req.query('secret');
+    if (secret !== process.env.AUTH_SECRET) {
+      return c.json({ error: 'Unauthorized: Missing or invalid secret' }, 401);
+    }
+    const authUrl = await getAuthUrl(secret); // secretをstateとして渡す
     return c.redirect(authUrl);
   } catch (error) {
     console.error('Auth URL generation error:', error);
@@ -32,8 +36,15 @@ app.get('/auth/google', async (c) => {
 app.get('/oauth2callback', async (c) => {
   try {
     const code = c.req.query('code');
+    const state = c.req.query('state');
+
     if (!code) {
       return c.json({ error: 'No authorization code provided' }, 400);
+    }
+
+    // CSRF対策: state (AUTH_SECRET) の検証
+    if (state !== process.env.AUTH_SECRET) {
+      return c.json({ error: 'Unauthorized: Invalid state parameter' }, 401);
     }
 
     await handleAuthCallback(code);
