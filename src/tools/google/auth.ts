@@ -104,11 +104,23 @@ function createOAuth2Client(): Auth.OAuth2Client {
  */
 async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
   const { client_id, client_secret } = loadCredentials();
+  // refresh_token がない場合は既存のものを引き継ぐ
+  let refreshToken = client.credentials.refresh_token as string | undefined | null;
+  if (!refreshToken) {
+    // 既存のデータをFirestoreから直接読み込む（型安全のため）
+    const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
+    const doc = await docRef.get();
+    if (doc.exists) {
+      const saved = doc.data() as SavedCredentials;
+      refreshToken = saved.refresh_token;
+    }
+  }
+
   const payload: SavedCredentials = {
     type: 'authorized_user',
     client_id,
     client_secret,
-    refresh_token: client.credentials.refresh_token as string,
+    refresh_token: refreshToken!,
   };
 
   const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
