@@ -43,7 +43,8 @@ export const createEvent = new FunctionTool({
   parameters: createEventSchema,
   execute: async ({ summary, startDateTime, endDateTime, description }: { summary: string, startDateTime: string, endDateTime: string, description?: string }) => {
     const calendar = await getCalendarClient();
-    const toEventTime = (dateTime: string) => ({ dateTime, timeZone: 'Asia/Tokyo' });
+    const timeZone = process.env.TZ || 'Asia/Tokyo';
+    const toEventTime = (dateTime: string) => ({ dateTime, timeZone });
     const event = {
       summary,
       description,
