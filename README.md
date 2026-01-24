@@ -38,9 +38,18 @@ npm run dev
 
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_CLOUD_PROJECT` | GCP Project ID |
-| `GOOGLE_CLOUD_LOCATION` | GCP Region (e.g., `us-central1`) |
-| `GEMINI_MODEL` | Model name (e.g., `gemini-1.5-flash-001`) |
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (e.g., `us-central1` or `global`) |
+| `GEMINI_MODEL` | Gemini Model Name (e.g., `gemini-1.5-pro`) |
+| `FIRESTORE_COLLECTION` | Firestore collection for session storage |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (for PR operations) |
+| `GITHUB_WEBHOOK_SECRET` | Secret for GitHub Webhook verification |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Client Secret |
+| `GOOGLE_REDIRECT_URI` | Google OAuth 2.0 Redirect URI |
+| `AUTH_SECRET` | Secret to protect `/auth/google` and session state |
+| `TZ` | Timezone (e.g., `Asia/Tokyo`) |
+| `PORT` | Server port (default: 8080) |
 
 ## License
 
