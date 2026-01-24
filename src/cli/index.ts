@@ -31,7 +31,7 @@ program
       }
 
       const data = await response.json() as { response: string };
-      console.log(chalk.cyan(data.response));
+      console.log(chalk.bold.magenta('Claris 🌸 > ') + chalk.cyan(data.response));
     } catch (error) {
       console.error(chalk.red('Error communicating with Claris:'), error);
       process.exit(1);
