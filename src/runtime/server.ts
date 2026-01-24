@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
 import { getAuthUrl, handleAuthCallback } from '../tools/google/auth.js';
+import { MESSAGES } from '../constants/messages.js';
 
 export const app = new Hono();
 
@@ -13,7 +14,7 @@ app.get('/', (c) => {
   return c.json({
     name: 'Claris',
     status: 'online',
-    message: 'Hello! Claris is ready to help! 🌸',
+    message: MESSAGES.SERVER.HEALTH_CHECK,
   });
 });
 
@@ -22,13 +23,13 @@ app.get('/auth/google', async (c) => {
   try {
     const secret = c.req.query('secret');
     if (secret !== process.env.AUTH_SECRET) {
-      return c.json({ error: 'Unauthorized: Missing or invalid secret' }, 401);
+      return c.json({ error: MESSAGES.AUTH.UNAUTHORIZED_SECRET }, 401);
     }
     const authUrl = await getAuthUrl(secret); // secretをstateとして渡す
     return c.redirect(authUrl);
   } catch (error) {
     console.error('Auth URL generation error:', error);
-    return c.json({ error: 'Failed to generate auth URL' }, 500);
+    return c.json({ error: MESSAGES.AUTH.FAILED_GENERATE_URL }, 500);
   }
 });
 
@@ -39,28 +40,24 @@ app.get('/oauth2callback', async (c) => {
     const state = c.req.query('state');
 
     if (!code) {
-      return c.json({ error: 'No authorization code provided' }, 400);
+      return c.json({ error: MESSAGES.AUTH.MISSING_CODE }, 400);
     }
 
     // CSRF対策: state (AUTH_SECRET) の検証
     if (state !== process.env.AUTH_SECRET) {
-      return c.json({ error: 'Unauthorized: Invalid state parameter' }, 401);
+      return c.json({ error: MESSAGES.AUTH.INVALID_STATE }, 401);
     }
 
     await handleAuthCallback(code);
-    return c.html(`
-      <html>
-        <head><title>Authentication Successful</title></head>
-        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-          <h1>✨ Authentication Successful! ✨</h1>
-          <p>Google Workspace との連携が完了したよ！🌸</p>
-          <p>このタブは閉じて大丈夫だよ！</p>
-        </body>
-      </html>
-    `);
+    return c.html(MESSAGES.AUTH.SUCCESS_HTML(
+      MESSAGES.AUTH.SUCCESS_TITLE,
+      MESSAGES.AUTH.SUCCESS_HEADER,
+      MESSAGES.AUTH.SUCCESS_BODY,
+      MESSAGES.AUTH.SUCCESS_FOOTER
+    ));
   } catch (error) {
     console.error('OAuth callback error:', error);
-    return c.json({ error: 'Authentication failed' }, 500);
+    return c.json({ error: MESSAGES.AUTH.FAILED_PROCESS }, 500);
   }
 });
 
@@ -70,7 +67,7 @@ app.post('/chat', async (c) => {
     const body = await c.req.json<{ userId?: string; sessionId?: string; message: string }>();
 
     if (!body.message) {
-      return c.json({ error: 'message is required' }, 400);
+      return c.json({ error: MESSAGES.SERVER.CHAT_MISSING_MESSAGE }, 400);
     }
 
     const userId = body.userId || 'anonymous';
@@ -89,7 +86,7 @@ app.post('/chat', async (c) => {
     });
   } catch (error) {
     console.error('Chat error:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return c.json({ error: MESSAGES.SERVER.INTERNAL_ERROR }, 500);
   }
 });
 

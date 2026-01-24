@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { createHmac } from 'crypto';
 import { adkRunner } from './runner.js';
 import { fetchDiff, getPRDetails, postComment, addReviewer, createReview, addLabels } from '../tools/git/github.js';
+import { MESSAGES } from '../constants/messages.js';
 
 export const webhookApp = new Hono();
 
@@ -26,12 +27,18 @@ const WEBHOOK_SECRET: string = webhookSecretEnv;
  */
 function verifySignature(payload: string, signature: string | undefined): boolean {
   if (!signature) {
+    console.warn(MESSAGES.WEBHOOK.NO_SIGNATURE_HEADER);
     return false;
   }
 
   const hmac = createHmac('sha256', WEBHOOK_SECRET);
   const digest = 'sha256=' + hmac.update(payload).digest('hex');
-  return signature === digest;
+
+  const isValid = signature === digest;
+  if (!isValid) {
+    console.error(MESSAGES.WEBHOOK.INVALID_SIGNATURE);
+  }
+  return isValid;
 }
 
 /**
@@ -56,7 +63,7 @@ async function handlePullRequestEvent(
 
   // Only process opened, synchronize (new commits), or reopened PRs
   if (!['opened', 'synchronize', 'reopened'].includes(action)) {
-    return `Skipped: PR action "${action}" doesn't require review`;
+    return MESSAGES.WEBHOOK.SKIPPED_ACTION(action);
   }
 
   try {
@@ -122,7 +129,7 @@ ${diff.slice(0, 100000)}${diff.length > 100000 ? '\n... (差分が長いため�
       const jsonString = (jsonMatch && jsonMatch[1]) ? jsonMatch[1] : aiResponse;
       reviewData = JSON.parse(jsonString);
     } catch (e) {
-      console.error('❌ Failed to parse AI response as JSON:', e);
+      console.error(MESSAGES.WEBHOOK.FAILED_PARSE_AI, e);
       // Fallback: treat as comment
       reviewData = { status: 'COMMENT', comment: aiResponse };
     }
@@ -139,7 +146,7 @@ ${diff.slice(0, 100000)}${diff.length > 100000 ? '\n... (差分が長いため�
       repo,
       prNumber,
       event: reviewEvent,
-      body: `## 🌸 Claris Review\n\n${reviewData.comment}`,
+      body: `${MESSAGES.WEBHOOK.REVIEW_HEADER}${reviewData.comment}`,
     });
     console.log('✅ Review created:', reviewResult);
 
@@ -161,16 +168,22 @@ ${diff.slice(0, 100000)}${diff.length > 100000 ? '\n... (差分が長いため�
  * Main webhook endpoint
  */
 webhookApp.post('/', async (c) => {
+  const allHeaders = c.req.header();
   const eventType = c.req.header('X-GitHub-Event');
-  const signature = c.req.header('X-Hub-Signature-256');
+  // 署名ヘッダーを複数の候補から探す（大文字小文字対策）
+  const signature = c.req.header('X-Hub-Signature-256') ||
+    c.req.header('x-hub-signature-256') ||
+    allHeaders['x-hub-signature-256'];
+
   const rawBody = await c.req.text();
 
   console.log(`🔔 Webhook received: ${eventType || 'unknown'}`);
+  console.log(`[Webhook Debug] Found Signature: ${!!signature}`);
 
   // Verify signature
   if (!verifySignature(rawBody, signature)) {
-    console.error('❌ Invalid webhook signature');
-    return c.json({ error: 'Invalid signature' }, 401);
+    console.error(MESSAGES.WEBHOOK.INVALID_SIGNATURE);
+    return c.json({ error: MESSAGES.WEBHOOK.INVALID_SIGNATURE }, 401);
   }
 
   // Parse payload
@@ -178,12 +191,12 @@ webhookApp.post('/', async (c) => {
   try {
     payload = JSON.parse(rawBody);
   } catch {
-    return c.json({ error: 'Invalid JSON' }, 400);
+    return c.json({ error: MESSAGES.WEBHOOK.INVALID_JSON }, 400);
   }
 
   const repo = getRepoFromPayload(payload);
   if (!repo) {
-    return c.json({ error: 'No repository in payload' }, 400);
+    return c.json({ error: MESSAGES.WEBHOOK.MISSING_REPO }, 400);
   }
 
   // Handle different event types
@@ -209,7 +222,7 @@ webhookApp.post('/', async (c) => {
   // Ping event (sent when webhook is first configured)
   if (eventType === 'ping') {
     console.log('🏓 Ping received! Webhook is configured correctly.');
-    return c.json({ message: 'Pong! Claris is ready! 🌸' });
+    return c.json({ message: MESSAGES.WEBHOOK.PONG });
   }
 
   // Other events
