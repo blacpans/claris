@@ -13,9 +13,9 @@ program
 
 program
   .command('talk')
-  .description('Talk to Claris')
-  .argument('<message>', 'Message to send')
-  .option('-u, --url <url>', 'API URL', process.env.CLARIS_API_URL || 'http://localhost:3000')
+  .description('クラリスと会話する')
+  .argument('<message>', '送信するメッセージ')
+  .option('-u, --url <url>', 'APIのURL', process.env.CLARIS_API_URL || 'http://localhost:3000')
   .action(async (message, options) => {
     const apiUrl = options.url;
     try {
@@ -31,13 +31,19 @@ program
         throw new Error(`Server error: ${response.status} ${response.statusText}`);
       }
 
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Unexpected response format: ${contentType}\nBody: ${text.slice(0, 200)}...`);
+      }
+
       const data = await response.json() as { response: string };
       console.log(chalk.bold.magenta('Claris 🌸 > ') + chalk.cyan(data.response));
     } catch (error) {
       if (error instanceof Error && (error.message.includes('fetch failed') || (error as any).cause?.code === 'ECONNREFUSED')) {
-        console.error(chalk.red('Unable to connect to Claris. Is the server running? 💦'));
+        console.error(chalk.red('クラリスに接続できませんでした。サーバーは起動していますか？💦'));
       } else {
-        console.error(chalk.red('Error communicating with Claris:'), error);
+        console.error(chalk.red('クラリスとの通信中にエラーが発生しました:'), error);
       }
       process.exit(1);
     }
