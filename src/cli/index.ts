@@ -15,8 +15,9 @@ program
   .command('talk')
   .description('Talk to Claris')
   .argument('<message>', 'Message to send')
-  .action(async (message) => {
-    const apiUrl = process.env.CLARIS_API_URL || 'http://localhost:3000';
+  .option('-u, --url <url>', 'API URL', process.env.CLARIS_API_URL || 'http://localhost:3000')
+  .action(async (message, options) => {
+    const apiUrl = options.url;
     try {
       const response = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
@@ -33,7 +34,11 @@ program
       const data = await response.json() as { response: string };
       console.log(chalk.bold.magenta('Claris 🌸 > ') + chalk.cyan(data.response));
     } catch (error) {
-      console.error(chalk.red('Error communicating with Claris:'), error);
+      if (error instanceof Error && (error.message.includes('fetch failed') || (error as any).cause?.code === 'ECONNREFUSED')) {
+        console.error(chalk.red('Unable to connect to Claris. Is the server running? 💦'));
+      } else {
+        console.error(chalk.red('Error communicating with Claris:'), error);
+      }
       process.exit(1);
     }
   });
