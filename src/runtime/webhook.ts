@@ -4,7 +4,7 @@
  * Handles incoming webhook events from GitHub and triggers appropriate agent actions.
  */
 import { Hono } from 'hono';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { adkRunner } from './runner.js';
 import { fetchDiff, getPRDetails, postComment, addReviewer, createReview, addLabels } from '../tools/git/github.js';
 import { MESSAGES } from '../constants/messages.js';
@@ -34,7 +34,15 @@ function verifySignature(payload: string, signature: string | undefined): boolea
   const hmac = createHmac('sha256', WEBHOOK_SECRET);
   const digest = 'sha256=' + hmac.update(payload).digest('hex');
 
-  const isValid = signature === digest;
+  const signatureBuffer = Buffer.from(signature);
+  const digestBuffer = Buffer.from(digest);
+
+  if (signatureBuffer.length !== digestBuffer.length) {
+    console.error(MESSAGES.WEBHOOK.INVALID_SIGNATURE);
+    return false;
+  }
+
+  const isValid = timingSafeEqual(signatureBuffer, digestBuffer);
   if (!isValid) {
     console.error(MESSAGES.WEBHOOK.INVALID_SIGNATURE);
   }
