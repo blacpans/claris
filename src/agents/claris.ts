@@ -9,10 +9,10 @@ import { listUpcomingEvents, createEvent, listUnreadEmails } from '../tools/inde
 
 // Model configuration
 const model = new Gemini({
-  model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+  model: process.env.GEMINI_MODEL,
   vertexai: true,
   project: process.env.GOOGLE_CLOUD_PROJECT,
-  location: process.env.GOOGLE_CLOUD_LOCATION || 'global',
+  location: process.env.GOOGLE_CLOUD_LOCATION,
 });
 
 // Claris Agent Definition

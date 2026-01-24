@@ -178,7 +178,6 @@ webhookApp.post('/', async (c) => {
   const rawBody = await c.req.text();
 
   console.log(`🔔 Webhook received: ${eventType || 'unknown'}`);
-  console.log(`[Webhook Debug] Found Signature: ${!!signature}`);
 
   // Verify signature
   if (!verifySignature(rawBody, signature)) {
