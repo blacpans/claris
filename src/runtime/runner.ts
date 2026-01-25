@@ -71,6 +71,7 @@ export class AdkRunnerService {
     let responseText = '';
     for await (const event of events) {
       if (session) {
+        console.log(`[Runner] Event: ${JSON.stringify(event)}`);
         await this.sessionService.appendEvent({
           session,
           event,
