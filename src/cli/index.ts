@@ -16,7 +16,7 @@ program
   .command(CLI_MESSAGES.COMMANDS.TALK.NAME)
   .description(CLI_MESSAGES.COMMANDS.TALK.DESCRIPTION)
   .argument('<message>', CLI_MESSAGES.COMMANDS.TALK.ARG_MESSAGE)
-  .option('-u, --url <url>', CLI_MESSAGES.COMMANDS.TALK.OPT_URL, process.env.CLARIS_API_URL || 'http://localhost:3000')
+  .option('-u, --url <url>', CLI_MESSAGES.COMMANDS.TALK.OPT_URL, process.env.CLARIS_API_URL || 'http://localhost:8080')
   .option('-c, --context <path>', 'Context file path for Soul Unison')
   .action(async (message: string, options: { url: string; context?: string }) => {
     const apiUrl = options.url;
