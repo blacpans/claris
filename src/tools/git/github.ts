@@ -122,3 +122,85 @@ export async function getPRDetails(input: FetchDiffInput): Promise<{
     changedFiles: pr.changed_files,
   };
 }
+
+// --- Review Enhancement Functions ---
+
+interface AddReviewerInput {
+  repo: string;
+  prNumber: number;
+  reviewer: string;
+}
+
+interface CreateReviewInput {
+  repo: string;
+  prNumber: number;
+  event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+  body: string;
+}
+
+interface AddLabelsInput {
+  repo: string;
+  prNumber: number;
+  labels: string[];
+}
+
+/**
+ * Adds a reviewer to a Pull Request
+ */
+export async function addReviewer(input: AddReviewerInput): Promise<string> {
+  const client = getGitHubClient();
+  const { owner, repo } = parseRepo(input.repo);
+
+  try {
+    await client.pulls.requestReviewers({
+      owner,
+      repo,
+      pull_number: input.prNumber,
+      reviewers: [input.reviewer],
+    });
+    return `Reviewer ${input.reviewer} added to PR #${input.prNumber}`;
+  } catch (error) {
+    // Reviewer might already be assigned or bot can't add itself
+    console.warn(`Could not add reviewer: ${error}`);
+    return `Could not add reviewer: ${error}`;
+  }
+}
+
+/**
+ * Creates a review on a Pull Request (Approve, Request Changes, or Comment)
+ */
+export async function createReview(input: CreateReviewInput): Promise<string> {
+  const client = getGitHubClient();
+  const { owner, repo } = parseRepo(input.repo);
+
+  const response = await client.pulls.createReview({
+    owner,
+    repo,
+    pull_number: input.prNumber,
+    event: input.event,
+    body: input.body,
+  });
+
+  return `Review created: ${response.data.html_url}`;
+}
+
+/**
+ * Adds labels to a Pull Request
+ */
+export async function addLabels(input: AddLabelsInput): Promise<string> {
+  const client = getGitHubClient();
+  const { owner, repo } = parseRepo(input.repo);
+
+  try {
+    await client.issues.addLabels({
+      owner,
+      repo,
+      issue_number: input.prNumber,
+      labels: input.labels,
+    });
+    return `Labels added: ${input.labels.join(', ')}`;
+  } catch (error) {
+    console.warn(`Could not add labels: ${error}`);
+    return `Could not add labels: ${error}`;
+  }
+}
