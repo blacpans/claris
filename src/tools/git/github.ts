@@ -45,7 +45,21 @@ export async function fetchDiff(input: FetchDiffInput): Promise<string> {
   });
 
   // Response is raw diff text when using diff format
-  return response.data as unknown as string;
+  // Response is raw diff text when using diff format
+  const fullDiff = response.data as unknown as string;
+
+  // Filter out lockfiles to save tokens and avoid truncation of important code
+  // Split by "diff --git ", filter out chunks containing lockfiles, then rejoin
+  const chunks = fullDiff.split('diff --git ');
+  const filteredHelper = chunks.filter(chunk => {
+    if (!chunk.trim()) return true; // Keep empty prelude if any
+    const firstLine = chunk.split('\n')[0];
+    return !firstLine.includes('package-lock.json') &&
+      !firstLine.includes('yarn.lock') &&
+      !firstLine.includes('pnpm-lock.yaml');
+  });
+
+  return filteredHelper.join('diff --git ');
 }
 
 /**
