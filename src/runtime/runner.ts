@@ -21,9 +21,11 @@ export class AdkRunnerService {
     userId: string;
     sessionId: string;
     message: string;
+    context?: { activeFile?: string }; // 🦀 Context for Soul Unison
   }): Promise<string> {
     // 毎回設定を読み込むことで、ナビカスの調整を即時反映する
-    const agent = await createClarisAgent();
+    // Context を渡して適切なソウルを共鳴させる
+    const agent = await createClarisAgent(options.context);
 
     // Ensure session exists
     let session = await this.sessionService.getSession({
@@ -52,6 +54,8 @@ export class AdkRunnerService {
       userId: options.userId,
       sessionId: options.sessionId,
     });
+
+    const config = await loadConfig();
 
     // Execute the agent turn
     const events = runner.runAsync({

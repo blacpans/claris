@@ -6,13 +6,13 @@
  */
 import { LlmAgent, Gemini } from '@google/adk';
 import { listUpcomingEvents, createEvent, listUnreadEmails } from '../tools/index.js';
-import { loadConfig, getModelName } from '../config/index.js';
-import { CLARIS_INSTRUCTIONS } from './prompts.js';
+import { loadConfig, getModelName, getStyleForExtension } from '../config/index.js';
+import { CLARIS_INSTRUCTIONS, STYLE_PROMPTS } from './prompts.js';
 
 /**
  * Claris Agent - The NetNavi Persona 🌸
  */
-export async function createClarisAgent() {
+export async function createClarisAgent(context?: { activeFile?: string }) {
   const config = await loadConfig();
   const modelName = getModelName(config.rapid);
   const agentName = process.env.CLARIS_NAME || 'Claris';
@@ -24,7 +24,19 @@ export async function createClarisAgent() {
     location: process.env.GOOGLE_CLOUD_LOCATION,
   });
 
-  const instruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);
+  let instruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);
+
+  // 🦀 Soul Unison: Apply Thinking Style based on active file 🐳
+  if (context?.activeFile) {
+    const style = getStyleForExtension(context.activeFile, config);
+    console.log(`[SoulUnison] ActiveFile: ${context.activeFile}, Style: ${style}`);
+    const soulPrompt = STYLE_PROMPTS[style];
+    if (soulPrompt) {
+      instruction += `\n\n${soulPrompt}`;
+    }
+  } else {
+    console.log('[SoulUnison] No context provided, defaulting to base persona.');
+  }
 
   return new LlmAgent({
     name: agentName.toLowerCase(),
