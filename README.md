@@ -81,6 +81,20 @@ npm run dev
 | `AUTH_SECRET` | Secret to protect `/auth/google` and session state |
 | `TZ` | Timezone (e.g., `Asia/Tokyo`) |
 | `PORT` | Server port (default: 8080) |
+| `CLARIS_NAME` | Agent Name (default: Claris) |
+
+## CLI Tool 💻
+
+You can interact with Claris directly from your terminal.
+
+```bash
+# Method 1: Using npx (Recommended for dev)
+npx tsx src/cli/index.ts talk "Hello!"
+
+# Method 2: Global Link (For ease of use)
+npm install -g .
+claris talk "Hello!" -c src/index.ts
+```
 
 ## License
 
