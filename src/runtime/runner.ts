@@ -1,7 +1,6 @@
 import { InMemoryRunner } from '@google/adk';
 import { createClarisAgent } from '../agents/claris.js';
 import { FirestoreSessionService } from '../sessions/firestoreSession.js';
-import { loadConfig } from '../config/index.js';
 
 const APP_NAME = 'claris';
 
@@ -54,8 +53,6 @@ export class AdkRunnerService {
       userId: options.userId,
       sessionId: options.sessionId,
     });
-
-    const config = await loadConfig();
 
     // Execute the agent turn
     const events = runner.runAsync({

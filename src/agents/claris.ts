@@ -27,15 +27,14 @@ export async function createClarisAgent(context?: { activeFile?: string }) {
   let instruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);
 
   // 🦀 Soul Unison: Apply Thinking Style based on active file 🐳
-  if (context?.activeFile) {
-    const style = getStyleForExtension(context.activeFile, config);
-    console.log(`[SoulUnison] ActiveFile: ${context.activeFile}, Style: ${style}`);
+  // 🦀 Soul Unison: Apply Thinking Style based on active file or preference 🐳
+  if (context?.activeFile || config.preferredStyle) {
+    const style = getStyleForExtension(context?.activeFile || '', config);
     const soulPrompt = STYLE_PROMPTS[style];
+
     if (soulPrompt) {
       instruction += `\n\n${soulPrompt}`;
     }
-  } else {
-    console.log('[SoulUnison] No context provided, defaulting to base persona.');
   }
 
   return new LlmAgent({
