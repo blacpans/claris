@@ -21,7 +21,7 @@ Claris is an autonomous AI companion designed to assist developers with code rev
 - **Runtime**: Node.js + Hono
 - **LLM**: Google Gemini (via Vertex AI)
 - **State**: Firestore (for session persistence)
-- **Deployment**: Google Cloud Run
+- **Deployment**: Google Cloud Run (Requires "CPU always allocated" for background tasks)
 
 ## Soul Unison (Thinking Styles) 🧠
 
