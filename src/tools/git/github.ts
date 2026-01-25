@@ -3,6 +3,7 @@
  *
  * These tools allow Claris to interact with GitHub PRs and Issues.
  */
+import { DEFAULT_IGNORED_FILES } from '../../config/defaults.js';
 import { getGitHubClient, parseRepo } from './client.js';
 
 // Tool input/output types
@@ -54,9 +55,7 @@ export async function fetchDiff(input: FetchDiffInput): Promise<string> {
   const filteredHelper = chunks.filter(chunk => {
     if (!chunk.trim()) return true; // Keep empty prelude if any
     const firstLine = chunk.split('\n')[0];
-    return !firstLine.includes('package-lock.json') &&
-      !firstLine.includes('yarn.lock') &&
-      !firstLine.includes('pnpm-lock.yaml');
+    return !DEFAULT_IGNORED_FILES.some(file => firstLine.includes(file));
   });
 
   return filteredHelper.join('diff --git ');

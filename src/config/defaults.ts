@@ -42,3 +42,14 @@ export const DEFAULT_STYLES = {
 } as const;
 
 export type ThinkingStyle = keyof typeof DEFAULT_STYLES;
+
+/**
+ * Default Ignored Files for Diff
+ * 巨大な差分やノイズになるファイルをここで定義する
+ */
+export const DEFAULT_IGNORED_FILES = [
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lockb',
+] as const;
