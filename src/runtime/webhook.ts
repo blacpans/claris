@@ -101,7 +101,11 @@ GitHub PRレビュー依頼が来たよ！
 
 ## 差分 (Diff)
 \`\`\`diff
-${diff.slice(0, 100000)}${diff.length > 100000 ? '\n... (差分が長いため省略)' : ''}
+    // Fetch PR diff with exclusions to avoid noise and huge payloads
+    console.log('📄 Fetching diff...');
+    const diff = await fetchDiff({ repo, prNumber });
+
+${diff.slice(0, 300000)}${diff.length > 300000 ? '\n... (差分が長いため省略)' : ''}
 \`\`\`
 
 このPRをレビューして、問題点や改善提案があればコメントを作成してね。
@@ -233,5 +237,41 @@ webhookApp.post('/', async (c) => {
   }
 
   // Other events
+  if (eventType === 'issue_comment') {
+    const action = payload.action as string;
+    const issue = payload.issue as {
+      number: number;
+      pull_request?: unknown;
+      title: string;
+      user: { login: string };
+    };
+    const comment = payload.comment as {
+      body: string;
+      user: { login: string };
+    };
+
+    // Only process created comments on PRs
+    if (action === 'created' && issue.pull_request) {
+      const botName = process.env.CLARIS_NAME || 'Claris';
+
+      // Check if bot is mentioned (case insensitive)
+      // Also ensure we don't reply to ourselves (though usually bot token differs)
+      const isMentioned = comment.body.toLowerCase().includes(`@${botName.toLowerCase()}`) ||
+        comment.body.toLowerCase().includes(botName.toLowerCase());
+
+      if (isMentioned) {
+        console.log(`🤖 Bot mentioned in comment on PR #${issue.number} by ${comment.user.login}. Triggering re-review...`);
+
+        // Use setImmediate for async processing
+        setImmediate(() => {
+          // Treat as a 'synchronize' event to trigger a fresh review
+          handlePullRequestEvent('synchronize', issue.number, repo, issue.title, issue.user.login).catch(console.error);
+        });
+
+        return c.json({ received: true, event: eventType, action, triggered: true });
+      }
+    }
+  }
+
   return c.json({ received: true, event: eventType, message: 'Event not handled' });
 });

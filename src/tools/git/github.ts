@@ -3,6 +3,7 @@
  *
  * These tools allow Claris to interact with GitHub PRs and Issues.
  */
+import { DEFAULT_IGNORED_FILES } from '../../config/defaults.js';
 import { getGitHubClient, parseRepo } from './client.js';
 
 // Tool input/output types
@@ -45,7 +46,19 @@ export async function fetchDiff(input: FetchDiffInput): Promise<string> {
   });
 
   // Response is raw diff text when using diff format
-  return response.data as unknown as string;
+  // Response is raw diff text when using diff format
+  const fullDiff = response.data as unknown as string;
+
+  // Filter out lockfiles to save tokens and avoid truncation of important code
+  // Split by "diff --git ", filter out chunks containing lockfiles, then rejoin
+  const chunks = fullDiff.split('diff --git ');
+  const filteredHelper = chunks.filter(chunk => {
+    if (!chunk.trim()) return true; // Keep empty prelude if any
+    const firstLine = chunk.split('\n')[0];
+    return !DEFAULT_IGNORED_FILES.some(file => firstLine.includes(file));
+  });
+
+  return filteredHelper.join('diff --git ');
 }
 
 /**

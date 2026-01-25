@@ -1,16 +1,6 @@
-/**
- * ADK Runner Service - Orchestrates agent execution
- *
- * This service initializes the ADK Runner with Claris agent and Firestore sessions,
- * and provides a simple interface to execute agent turns from webhook handlers.
- */
 import { InMemoryRunner } from '@google/adk';
-import { clarisAgent } from '../agents/claris.js';
+import { createClarisAgent } from '../agents/claris.js';
 import { FirestoreSessionService } from '../sessions/firestoreSession.js';
-
-// Re-export FirestoreSessionService for compatibility with ADK Runner
-// Note: InMemoryRunner uses InMemorySessionService by default,
-// but we can pass our custom one via the constructor
 
 const APP_NAME = 'claris';
 
@@ -30,7 +20,12 @@ export class AdkRunnerService {
     userId: string;
     sessionId: string;
     message: string;
+    context?: { activeFile?: string }; // 🦀 Context for Soul Unison
   }): Promise<string> {
+    // 毎回設定を読み込むことで、ナビカスの調整を即時反映する
+    // Context を渡して適切なソウルを共鳴させる
+    const agent = await createClarisAgent(options.context);
+
     // Ensure session exists
     let session = await this.sessionService.getSession({
       appName: APP_NAME,
@@ -47,10 +42,8 @@ export class AdkRunnerService {
     }
 
     // Create runner with our session service
-    // Note: InMemoryRunner manages its own session service internally,
-    // so we need to manually sync with Firestore before/after runs
     const runner = new InMemoryRunner({
-      agent: clarisAgent,
+      agent,
       appName: APP_NAME,
     });
 
@@ -74,7 +67,6 @@ export class AdkRunnerService {
     // Collect response content
     let responseText = '';
     for await (const event of events) {
-      // Store event in Firestore for persistence
       if (session) {
         console.log(`[Runner] Event: ${JSON.stringify(event)}`);
         await this.sessionService.appendEvent({
@@ -84,7 +76,7 @@ export class AdkRunnerService {
       }
 
       // Extract text content from agent responses
-      if (event.author === clarisAgent.name && event.content?.parts) {
+      if (event.author === agent.name && event.content?.parts) {
         for (const part of event.content.parts) {
           if ('text' in part && part.text) {
             responseText += part.text;

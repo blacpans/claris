@@ -64,7 +64,12 @@ app.get('/oauth2callback', async (c) => {
 // Chat endpoint (for testing)
 app.post('/chat', async (c) => {
   try {
-    const body = await c.req.json<{ userId?: string; sessionId?: string; message: string }>();
+    const body = await c.req.json<{
+      userId?: string;
+      sessionId?: string;
+      message: string;
+      context?: { activeFile?: string };
+    }>();
 
     if (!body.message) {
       return c.json({ error: MESSAGES.SERVER.CHAT_MISSING_MESSAGE }, 400);
@@ -77,6 +82,7 @@ app.post('/chat', async (c) => {
       userId,
       sessionId,
       message: body.message,
+      context: body.context,
     });
 
     return c.json({
