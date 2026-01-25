@@ -11,7 +11,6 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "build": "tsc",
-    "build:cli": "tsc",
     "lint": "biome check src/",
     "format": "biome format --write src/"
   },
