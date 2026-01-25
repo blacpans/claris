@@ -3,19 +3,20 @@
 import 'dotenv/config';
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { CLI_MESSAGES } from './messages.js';
 
 const program = new Command();
 
 program
   .name('claris')
-  .description('Claris CLI Client')
+  .description(CLI_MESSAGES.DESCRIPTION)
   .version('0.1.0');
 
 program
-  .command('talk')
-  .description('クラリスと会話する')
-  .argument('<message>', '送信するメッセージ')
-  .option('-u, --url <url>', 'APIのURL', process.env.CLARIS_API_URL || 'http://localhost:3000')
+  .command(CLI_MESSAGES.COMMANDS.TALK.NAME)
+  .description(CLI_MESSAGES.COMMANDS.TALK.DESCRIPTION)
+  .argument('<message>', CLI_MESSAGES.COMMANDS.TALK.ARG_MESSAGE)
+  .option('-u, --url <url>', CLI_MESSAGES.COMMANDS.TALK.OPT_URL, process.env.CLARIS_API_URL || 'http://localhost:3000')
   .action(async (message, options) => {
     const apiUrl = options.url;
     try {
@@ -28,22 +29,22 @@ program
       });
 
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        throw new Error(CLI_MESSAGES.ERRORS.SERVER_ERROR(response.status, response.statusText));
       }
 
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
-        throw new Error(`Unexpected response format: ${contentType}\nBody: ${text.slice(0, 200)}...`);
+        throw new Error(CLI_MESSAGES.ERRORS.UNEXPECTED_RESPONSE(contentType, text.slice(0, 200)));
       }
 
       const data = await response.json() as { response: string };
-      console.log(chalk.bold.magenta('Claris 🌸 > ') + chalk.cyan(data.response));
+      console.log(chalk.bold.magenta(CLI_MESSAGES.PROMPTS.CLARIS) + chalk.cyan(data.response));
     } catch (error) {
       if (error instanceof Error && (error.message.includes('fetch failed') || (error as any).cause?.code === 'ECONNREFUSED')) {
-        console.error(chalk.red('クラリスに接続できませんでした。サーバーは起動していますか？💦'));
+        console.error(chalk.red(CLI_MESSAGES.ERRORS.CONNECTION_REFUSED));
       } else {
-        console.error(chalk.red('クラリスとの通信中にエラーが発生しました:'), error);
+        console.error(chalk.red(CLI_MESSAGES.ERRORS.COMMUNICATION_ERROR), error);
       }
       process.exit(1);
     }
