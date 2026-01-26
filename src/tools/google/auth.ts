@@ -1,4 +1,4 @@
-import { Firestore } from '@google-cloud/firestore';
+
 import { google, Auth } from 'googleapis';
 
 const SCOPES = [
@@ -6,17 +6,9 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
 ];
 
-const CREDENTIALS_COLLECTION = 'google-credentials';
-
-// Firestore インスタンス（遅延初期化）
-let db: Firestore | null = null;
-
-function getFirestore(): Firestore {
-  if (!db) {
-    db = new Firestore({ ignoreUndefinedProperties: true });
-  }
-  return db;
-}
+const CREDENTIALS_PATH = 'token.json';
+import fs from 'fs/promises';
+import path from 'path';
 
 /**
  * Type Guard for OAuth2Client
@@ -43,18 +35,20 @@ interface SavedCredentials {
 }
 
 /**
- * Firestoreからトークンを読み込む
+ * トークン保存パスを取得
+ */
+function getTokenPath(): string {
+  return path.resolve(process.cwd(), CREDENTIALS_PATH);
+}
+
+/**
+ * トークンをローカルファイルから読み込む
  */
 async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Client | null> {
   try {
-    const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return null;
-    }
-
-    const credentials = doc.data() as SavedCredentials;
+    const tokenPath = getTokenPath();
+    const content = await fs.readFile(tokenPath, 'utf-8');
+    const credentials = JSON.parse(content) as SavedCredentials;
     const client = google.auth.fromJSON(credentials);
 
     if (isOAuth2Client(client) || isJWT(client)) {
@@ -62,6 +56,7 @@ async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Clie
     }
     return null;
   } catch {
+    // File not found or invalid
     return null;
   }
 }
@@ -100,19 +95,28 @@ function createOAuth2Client(): Auth.OAuth2Client {
 }
 
 /**
- * トークンをFirestoreに保存する
+ * トークンをローカルファイルに保存する
  */
 async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
   const { client_id, client_secret } = loadCredentials();
   // refresh_token がない場合は既存のものを引き継ぐ
   let refreshToken = client.credentials.refresh_token as string | undefined | null;
   if (!refreshToken) {
-    // 既存のデータをFirestoreから直接読み込む（型安全のため）
-    const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
-    const doc = await docRef.get();
-    if (doc.exists) {
-      const saved = doc.data() as SavedCredentials;
-      refreshToken = saved.refresh_token;
+    // 既存のデータを読み込む
+    const existing = await loadSavedCredentialsIfExist();
+    if (existing && 'credentials' in existing) {
+      // Note: existing is Auth.JWT or OAuth2Client. 
+      // If it's OAuth2Client, it has credentials.
+      // However, loadSavedCredentialsIfExist uses google.auth.fromJSON which returns a client.
+      // We can read the file directly to be safe, or cast existing.
+      // Let's read file directly to be simple and safe.
+      try {
+        const content = await fs.readFile(getTokenPath(), 'utf-8');
+        const saved = JSON.parse(content) as SavedCredentials;
+        refreshToken = saved.refresh_token;
+      } catch {
+        // Ignore
+      }
     }
   }
 
@@ -123,9 +127,8 @@ async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
     refresh_token: refreshToken!,
   };
 
-  const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
-  await docRef.set(payload);
-  console.log('[Firestore] Saved Google OAuth credentials');
+  await fs.writeFile(getTokenPath(), JSON.stringify(payload, null, 2));
+  console.log(`[Auth] Saved Google OAuth credentials to ${CREDENTIALS_PATH}`);
 }
 
 /**

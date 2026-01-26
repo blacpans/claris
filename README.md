@@ -94,6 +94,9 @@ npx tsx src/cli/index.ts talk "Hello!"
 # Method 2: Global Link (For ease of use)
 npm install -g .
 claris talk "Hello!" -c src/index.ts
+
+# Check Status (Google Calendar & Gmail)
+claris status
 ```
 
 ## License
