@@ -2,7 +2,7 @@
  * Claris - An Agentic NetNavi 🌸
  * Entry point for the application
  */
-import 'dotenv/config';
+import './config/env.js';
 import { serve } from '@hono/node-server';
 import { app } from './runtime/server.js';
 

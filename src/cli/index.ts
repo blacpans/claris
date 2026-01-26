@@ -1,13 +1,8 @@
 #!/usr/bin/env node
 
-import 'dotenv/config';
+import '../config/env.js';
 import { Command } from 'commander';
-import chalk from 'chalk';
 import { CLI_MESSAGES } from './messages.js';
-import { registerStatus } from './status.js';
-
-const program = new Command();
-
 import { registerTalk } from './talk.js';
 import { registerStatus } from './status.js';
 
