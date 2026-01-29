@@ -9,8 +9,8 @@ import { GoogleGenAI, Modality } from '@google/genai';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3000;
-const MODEL = 'gemini-live-2.5-flash-native-audio';
+const PORT = Number(process.env.RELAY_PORT) || 3000;
+const MODEL = process.env.GEMINI_LIVE_MODEL || 'gemini-live-2.5-flash-native-audio';
 
 // Initialize Fastify
 const app = Fastify({ logger: true });
@@ -24,9 +24,9 @@ app.register(fastifyStatic, {
 // Initialize Gemini Client
 const client = new GoogleGenAI({
   project: process.env.GOOGLE_CLOUD_PROJECT,
-  location: 'us-central1',
+  location: process.env.GEMINI_LIVE_LOCATION || 'us-central1',
   vertexai: true,
-  apiVersion: 'v1beta1',
+  apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
 });
 
 // WebSocket Server for Browser Client
