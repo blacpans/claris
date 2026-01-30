@@ -11,91 +11,91 @@ export const app = new Hono();
 
 // Health check endpoint
 app.get('/', (c) => {
-	return c.json({
-		name: 'Claris',
-		status: 'online',
-		message: MESSAGES.SERVER.HEALTH_CHECK,
-	});
+  return c.json({
+    name: 'Claris',
+    status: 'online',
+    message: MESSAGES.SERVER.HEALTH_CHECK,
+  });
 });
 
 // Google OAuth: 認証開始エンドポイント
 app.get('/auth/google', async (c) => {
-	try {
-		const secret = c.req.query('secret');
-		if (secret !== process.env.AUTH_SECRET) {
-			return c.json({ error: MESSAGES.AUTH.UNAUTHORIZED_SECRET }, 401);
-		}
-		const authUrl = await getAuthUrl(secret); // secretをstateとして渡す
-		return c.redirect(authUrl);
-	} catch (error) {
-		console.error('Auth URL generation error:', error);
-		return c.json({ error: MESSAGES.AUTH.FAILED_GENERATE_URL }, 500);
-	}
+  try {
+    const secret = c.req.query('secret');
+    if (secret !== process.env.AUTH_SECRET) {
+      return c.json({ error: MESSAGES.AUTH.UNAUTHORIZED_SECRET }, 401);
+    }
+    const authUrl = await getAuthUrl(secret); // secretをstateとして渡す
+    return c.redirect(authUrl);
+  } catch (error) {
+    console.error('Auth URL generation error:', error);
+    return c.json({ error: MESSAGES.AUTH.FAILED_GENERATE_URL }, 500);
+  }
 });
 
 // Google OAuth: コールバックエンドポイント
 app.get('/oauth2callback', async (c) => {
-	try {
-		const code = c.req.query('code');
-		const state = c.req.query('state');
+  try {
+    const code = c.req.query('code');
+    const state = c.req.query('state');
 
-		if (!code) {
-			return c.json({ error: MESSAGES.AUTH.MISSING_CODE }, 400);
-		}
+    if (!code) {
+      return c.json({ error: MESSAGES.AUTH.MISSING_CODE }, 400);
+    }
 
-		// CSRF対策: state (AUTH_SECRET) の検証
-		if (state !== process.env.AUTH_SECRET) {
-			return c.json({ error: MESSAGES.AUTH.INVALID_STATE }, 401);
-		}
+    // CSRF対策: state (AUTH_SECRET) の検証
+    if (state !== process.env.AUTH_SECRET) {
+      return c.json({ error: MESSAGES.AUTH.INVALID_STATE }, 401);
+    }
 
-		await handleAuthCallback(code);
-		return c.html(
-			MESSAGES.AUTH.SUCCESS_HTML(
-				MESSAGES.AUTH.SUCCESS_TITLE,
-				MESSAGES.AUTH.SUCCESS_HEADER,
-				MESSAGES.AUTH.SUCCESS_BODY,
-				MESSAGES.AUTH.SUCCESS_FOOTER,
-			),
-		);
-	} catch (error) {
-		console.error('OAuth callback error:', error);
-		return c.json({ error: MESSAGES.AUTH.FAILED_PROCESS }, 500);
-	}
+    await handleAuthCallback(code);
+    return c.html(
+      MESSAGES.AUTH.SUCCESS_HTML(
+        MESSAGES.AUTH.SUCCESS_TITLE,
+        MESSAGES.AUTH.SUCCESS_HEADER,
+        MESSAGES.AUTH.SUCCESS_BODY,
+        MESSAGES.AUTH.SUCCESS_FOOTER,
+      ),
+    );
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    return c.json({ error: MESSAGES.AUTH.FAILED_PROCESS }, 500);
+  }
 });
 
 // Chat endpoint (for testing)
 app.post('/chat', async (c) => {
-	try {
-		const body = await c.req.json<{
-			userId?: string;
-			sessionId?: string;
-			message: string;
-			context?: { activeFile?: string };
-		}>();
+  try {
+    const body = await c.req.json<{
+      userId?: string;
+      sessionId?: string;
+      message: string;
+      context?: { activeFile?: string };
+    }>();
 
-		if (!body.message) {
-			return c.json({ error: MESSAGES.SERVER.CHAT_MISSING_MESSAGE }, 400);
-		}
+    if (!body.message) {
+      return c.json({ error: MESSAGES.SERVER.CHAT_MISSING_MESSAGE }, 400);
+    }
 
-		const userId = body.userId || 'anonymous';
-		const sessionId = body.sessionId || `session-${Date.now()}`;
+    const userId = body.userId || 'anonymous';
+    const sessionId = body.sessionId || `session-${Date.now()}`;
 
-		const response = await adkRunner.run({
-			userId,
-			sessionId,
-			message: body.message,
-			context: body.context,
-		});
+    const response = await adkRunner.run({
+      userId,
+      sessionId,
+      message: body.message,
+      context: body.context,
+    });
 
-		return c.json({
-			userId,
-			sessionId,
-			response,
-		});
-	} catch (error) {
-		console.error('Chat error:', error);
-		return c.json({ error: MESSAGES.SERVER.INTERNAL_ERROR }, 500);
-	}
+    return c.json({
+      userId,
+      sessionId,
+      response,
+    });
+  } catch (error) {
+    console.error('Chat error:', error);
+    return c.json({ error: MESSAGES.SERVER.INTERNAL_ERROR }, 500);
+  }
 });
 
 // Mount webhook handler

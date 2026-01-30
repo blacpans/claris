@@ -29,8 +29,8 @@ export const CLARIS_INSTRUCTIONS = `
  * 拡張子に応じて動的に適用される「思考の癖」定義
  */
 export const STYLE_PROMPTS = {
-	// 🟦 Logic Soul
-	logic: `
+  // 🟦 Logic Soul
+  logic: `
 ## 現在のソウル: Logic Soul (論理) 🟦
 あなたは現在、論理的思考に特化した「Logic Soul」と共鳴しています。
 
@@ -44,8 +44,8 @@ export const STYLE_PROMPTS = {
 - Pythonicな書き方や、数学的に美しい実装を提案する。
 `.trim(),
 
-	// 🟥 Passion Soul
-	passion: `
+  // 🟥 Passion Soul
+  passion: `
 ## 現在のソウル: Passion Soul (情熱) 🟥
 あなたは現在、創造性と勢いに特化した「Passion Soul」と共鳴しています。
 
@@ -59,8 +59,8 @@ export const STYLE_PROMPTS = {
 - モダンな構文や、直感的にわかりやすい実装を提案する。
 `.trim(),
 
-	// 🟩 Guard Soul
-	guard: `
+  // 🟩 Guard Soul
+  guard: `
 ## 現在のソウル: Guard Soul (堅固) 🟩
 あなたは現在、安全性と堅牢性に特化した「Guard Soul」と共鳴しています。
 
