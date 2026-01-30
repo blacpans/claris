@@ -16,6 +16,11 @@ const statusText = document.getElementById('statusText');
 const logArea = document.getElementById('logArea');
 const textInput = document.getElementById('textInput');
 const btnSendText = document.getElementById('btnSendText');
+const btnVoice = document.getElementById('btnVoice');
+
+// Web Speech API (STT)
+let recognition = null;
+let isListening = false;
 
 function log(msg) {
     const div = document.createElement('div');
@@ -278,3 +283,80 @@ textInput.addEventListener('keypress', (e) => {
         btnSendText.click();
     }
 });
+
+// Web Speech API (STT) Implementation
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        log('❌ Web Speech API not supported in this browser');
+        btnVoice.disabled = true;
+        return null;
+    }
+    
+    const rec = new SpeechRecognition();
+    rec.lang = 'ja-JP';
+    rec.continuous = true;
+    rec.interimResults = true;
+    
+    rec.onstart = () => {
+        isListening = true;
+        btnVoice.classList.add('recording');
+        btnVoice.textContent = '🔴 STOP';
+        statusDot.className = 'status-dot listening';
+        log('🎤 音声認識開始...');
+    };
+    
+    rec.onend = () => {
+        isListening = false;
+        btnVoice.classList.remove('recording');
+        btnVoice.textContent = '🎤 VOICE';
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            statusDot.className = 'status-dot connected';
+        }
+        log('🎤 音声認識終了');
+    };
+    
+    rec.onerror = (event) => {
+        log('❌ 音声認識エラー: ' + event.error);
+        isListening = false;
+        btnVoice.classList.remove('recording');
+        btnVoice.textContent = '🎤 VOICE';
+    };
+    
+    rec.onresult = (event) => {
+        const result = event.results[event.resultIndex];
+        const transcript = result[0].transcript;
+        
+        if (result.isFinal) {
+            log('📢 認識: ' + transcript);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'text', data: transcript }));
+            }
+        } else {
+            // 途中結果は入力欄に表示
+            textInput.value = transcript + '...';
+        }
+    };
+    
+    return rec;
+}
+
+// Voice button handler
+btnVoice.onclick = () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log('❌ 先に接続してね！');
+        return;
+    }
+    
+    if (!recognition) {
+        recognition = initSpeechRecognition();
+        if (!recognition) return;
+    }
+    
+    if (isListening) {
+        recognition.stop();
+    } else {
+        textInput.value = '';
+        recognition.start();
+    }
+};
