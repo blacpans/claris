@@ -2,10 +2,10 @@
  * Hono Server - Minimal runtime for Claris
  */
 import { Hono } from 'hono';
+import { MESSAGES } from '../constants/messages.js';
+import { getAuthUrl, handleAuthCallback } from '../tools/google/auth.js';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
-import { getAuthUrl, handleAuthCallback } from '../tools/google/auth.js';
-import { MESSAGES } from '../constants/messages.js';
 
 export const app = new Hono();
 
@@ -49,12 +49,14 @@ app.get('/oauth2callback', async (c) => {
     }
 
     await handleAuthCallback(code);
-    return c.html(MESSAGES.AUTH.SUCCESS_HTML(
-      MESSAGES.AUTH.SUCCESS_TITLE,
-      MESSAGES.AUTH.SUCCESS_HEADER,
-      MESSAGES.AUTH.SUCCESS_BODY,
-      MESSAGES.AUTH.SUCCESS_FOOTER
-    ));
+    return c.html(
+      MESSAGES.AUTH.SUCCESS_HTML(
+        MESSAGES.AUTH.SUCCESS_TITLE,
+        MESSAGES.AUTH.SUCCESS_HEADER,
+        MESSAGES.AUTH.SUCCESS_BODY,
+        MESSAGES.AUTH.SUCCESS_FOOTER,
+      ),
+    );
   } catch (error) {
     console.error('OAuth callback error:', error);
     return c.json({ error: MESSAGES.AUTH.FAILED_PROCESS }, 500);
@@ -98,4 +100,3 @@ app.post('/chat', async (c) => {
 
 // Mount webhook handler
 app.route('/webhook', webhookApp);
-

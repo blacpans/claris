@@ -23,19 +23,28 @@
   "author": "blacpans",
   "license": "MIT",
   "dependencies": {
+    "@fastify/static": "^9.0.0",
     "@google-cloud/firestore": "^8.2.0",
     "@google/adk": "^0.2.0",
+    "@google/genai": "^1.38.0",
     "@hono/node-server": "^1.14.1",
     "@octokit/rest": "^22.0.1",
+    "axios": "^1.13.4",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
     "dotenv": "^17.2.3",
+    "fastify": "^5.7.2",
     "googleapis": "^170.1.0",
-    "hono": "^4.7.4"
+    "hono": "^4.7.4",
+    "mic": "^2.1.2",
+    "node-record-lpcm16": "^1.0.1",
+    "speaker": "^0.5.5",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.13.1",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },

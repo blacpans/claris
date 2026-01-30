@@ -1,13 +1,13 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 /**
  * GitHub Webhook Handler
  *
  * Handles incoming webhook events from GitHub and triggers appropriate agent actions.
  */
 import { Hono } from 'hono';
-import { createHmac, timingSafeEqual } from 'crypto';
-import { adkRunner } from './runner.js';
-import { fetchDiff, getPRDetails, postComment, addReviewer, createReview, addLabels } from '../tools/git/github.js';
 import { MESSAGES } from '../constants/messages.js';
+import { addLabels, addReviewer, createReview, fetchDiff, getPRDetails, postComment } from '../tools/git/github.js';
+import { adkRunner } from './runner.js';
 
 export const webhookApp = new Hono();
 
@@ -32,7 +32,7 @@ function verifySignature(payload: string, signature: string | undefined): boolea
   }
 
   const hmac = createHmac('sha256', WEBHOOK_SECRET);
-  const digest = 'sha256=' + hmac.update(payload).digest('hex');
+  const digest = `sha256=${hmac.update(payload).digest('hex')}`;
 
   const signatureBuffer = Buffer.from(signature);
   const digestBuffer = Buffer.from(digest);
@@ -65,7 +65,7 @@ async function handlePullRequestEvent(
   prNumber: number,
   repo: string,
   prTitle: string,
-  prAuthor: string
+  prAuthor: string,
 ): Promise<string> {
   console.log(`📥 PR #${prNumber} "${prTitle}" by ${prAuthor} - Action: ${action}`);
 
@@ -134,11 +134,14 @@ ${diff.slice(0, 300000)}${diff.length > 300000 ? '\n... (差分が長いため�
     });
 
     // Parse AI response
-    let reviewData: { status: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'; comment: string };
+    let reviewData: {
+      status: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+      comment: string;
+    };
     try {
       // Extract JSON from code block
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/) || aiResponse.match(/```\n([\s\S]*?)\n```/);
-      const jsonString = (jsonMatch && jsonMatch[1]) ? jsonMatch[1] : aiResponse;
+      const jsonString = jsonMatch?.[1] ? jsonMatch[1] : aiResponse;
       reviewData = JSON.parse(jsonString);
     } catch (e) {
       console.error(MESSAGES.WEBHOOK.FAILED_PARSE_AI, e);
@@ -183,9 +186,8 @@ webhookApp.post('/', async (c) => {
   const allHeaders = c.req.header();
   const eventType = c.req.header('X-GitHub-Event');
   // 署名ヘッダーを複数の候補から探す（大文字小文字対策）
-  const signature = c.req.header('X-Hub-Signature-256') ||
-    c.req.header('x-hub-signature-256') ||
-    allHeaders['x-hub-signature-256'];
+  const signature =
+    c.req.header('X-Hub-Signature-256') || c.req.header('x-hub-signature-256') || allHeaders['x-hub-signature-256'];
 
   const rawBody = await c.req.text();
 
@@ -222,9 +224,7 @@ webhookApp.post('/', async (c) => {
     // Fire-and-forget: respond immediately, process in background
     // Note: In production, use a queue (Cloud Tasks, Pub/Sub) for reliability
     setImmediate(() => {
-      handlePullRequestEvent(action, pr.number, repo, pr.title, pr.user.login).catch(
-        console.error
-      );
+      handlePullRequestEvent(action, pr.number, repo, pr.title, pr.user.login).catch(console.error);
     });
 
     return c.json({ received: true, event: eventType, action });
@@ -256,11 +256,14 @@ webhookApp.post('/', async (c) => {
 
       // Check if bot is mentioned (case insensitive)
       // Also ensure we don't reply to ourselves (though usually bot token differs)
-      const isMentioned = comment.body.toLowerCase().includes(`@${botName.toLowerCase()}`) ||
+      const isMentioned =
+        comment.body.toLowerCase().includes(`@${botName.toLowerCase()}`) ||
         comment.body.toLowerCase().includes(botName.toLowerCase());
 
       if (isMentioned) {
-        console.log(`🤖 Bot mentioned in comment on PR #${issue.number} by ${comment.user.login}. Triggering re-review...`);
+        console.log(
+          `🤖 Bot mentioned in comment on PR #${issue.number} by ${comment.user.login}. Triggering re-review...`,
+        );
 
         // Use setImmediate for async processing
         setImmediate(() => {
@@ -268,10 +271,19 @@ webhookApp.post('/', async (c) => {
           handlePullRequestEvent('synchronize', issue.number, repo, issue.title, issue.user.login).catch(console.error);
         });
 
-        return c.json({ received: true, event: eventType, action, triggered: true });
+        return c.json({
+          received: true,
+          event: eventType,
+          action,
+          triggered: true,
+        });
       }
     }
   }
 
-  return c.json({ received: true, event: eventType, message: 'Event not handled' });
+  return c.json({
+    received: true,
+    event: eventType,
+    message: 'Event not handled',
+  });
 });

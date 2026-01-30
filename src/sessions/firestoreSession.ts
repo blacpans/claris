@@ -4,15 +4,15 @@
  * Implements ADK's BaseSessionService to store agent sessions in Firestore.
  * This enables stateful conversations across HTTP requests.
  */
-import { Firestore, FieldValue } from '@google-cloud/firestore';
+import { FieldValue, Firestore } from '@google-cloud/firestore';
 import type { Event, Session } from '@google/adk';
 import type {
+  AppendEventRequest,
   CreateSessionRequest,
+  DeleteSessionRequest,
   GetSessionRequest,
   ListSessionsRequest,
   ListSessionsResponse,
-  DeleteSessionRequest,
-  AppendEventRequest,
 } from '@google/adk';
 
 export class FirestoreSessionService {
@@ -67,9 +67,7 @@ export class FirestoreSessionService {
       session.events = session.events.slice(-request.config.numRecentEvents);
     }
     if (request.config?.afterTimestamp) {
-      session.events = session.events.filter(
-        (e) => e.timestamp > request.config!.afterTimestamp!
-      );
+      session.events = session.events.filter((e) => e.timestamp > request.config?.afterTimestamp!);
     }
 
     return session;

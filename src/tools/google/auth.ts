@@ -1,22 +1,7 @@
-import { Firestore } from '@google-cloud/firestore';
-import { google, Auth } from 'googleapis';
+import { type Auth, google } from 'googleapis';
+import { type SavedCredentials, getCredentialStore } from './store.js';
 
-const SCOPES = [
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/gmail.readonly',
-];
-
-const CREDENTIALS_COLLECTION = 'google-credentials';
-
-// Firestore インスタンス（遅延初期化）
-let db: Firestore | null = null;
-
-function getFirestore(): Firestore {
-  if (!db) {
-    db = new Firestore({ ignoreUndefinedProperties: true });
-  }
-  return db;
-}
+const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/gmail.readonly'];
 
 /**
  * Type Guard for OAuth2Client
@@ -33,29 +18,24 @@ function isJWT(client: unknown): client is Auth.JWT {
 }
 
 /**
- * 保存されたトークン情報の型
- */
-interface SavedCredentials {
-  type: 'authorized_user';
-  client_id: string;
-  client_secret: string;
-  refresh_token: string;
-}
-
-/**
- * Firestoreからトークンを読み込む
+ * トークンをストアから読み込む
+ * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
  */
 async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Client | null> {
   try {
-    const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
-    const doc = await docRef.get();
+    const store = getCredentialStore();
+    const credentials = await store.load();
+    if (!credentials) return null;
 
-    if (!doc.exists) {
-      return null;
-    }
+    // googleapis の fromJSON は authorized_user 形式を期待
+    const fullCredentials = {
+      type: 'authorized_user' as const,
+      client_id: credentials.client_id || process.env.GOOGLE_CLIENT_ID || '',
+      client_secret: credentials.client_secret || process.env.GOOGLE_CLIENT_SECRET || '',
+      refresh_token: credentials.refresh_token || '',
+    };
 
-    const credentials = doc.data() as SavedCredentials;
-    const client = google.auth.fromJSON(credentials);
+    const client = google.auth.fromJSON(fullCredentials);
 
     if (isOAuth2Client(client) || isJWT(client)) {
       return client;
@@ -76,7 +56,7 @@ function loadCredentials(): { client_id: string; client_secret: string } {
   if (!client_id || !client_secret) {
     throw new Error(
       'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables are required. ' +
-      'Set them in .env or configure via Secret Manager for Cloud Run.'
+        'Set them in .env or configure via Secret Manager for Cloud Run.',
     );
   }
 
@@ -100,19 +80,19 @@ function createOAuth2Client(): Auth.OAuth2Client {
 }
 
 /**
- * トークンをFirestoreに保存する
+ * トークンをストアに保存する
+ * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
  */
 async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
   const { client_id, client_secret } = loadCredentials();
+  const store = getCredentialStore();
+
   // refresh_token がない場合は既存のものを引き継ぐ
   let refreshToken = client.credentials.refresh_token as string | undefined | null;
   if (!refreshToken) {
-    // 既存のデータをFirestoreから直接読み込む（型安全のため）
-    const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
-    const doc = await docRef.get();
-    if (doc.exists) {
-      const saved = doc.data() as SavedCredentials;
-      refreshToken = saved.refresh_token;
+    const existing = await store.load();
+    if (existing?.refresh_token) {
+      refreshToken = existing.refresh_token;
     }
   }
 
@@ -120,12 +100,11 @@ async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
     type: 'authorized_user',
     client_id,
     client_secret,
-    refresh_token: refreshToken!,
+    refresh_token: refreshToken,
   };
 
-  const docRef = getFirestore().collection(CREDENTIALS_COLLECTION).doc('default');
-  await docRef.set(payload);
-  console.log('[Firestore] Saved Google OAuth credentials');
+  await store.save(payload);
+  console.log('[Auth] Saved Google OAuth credentials');
 }
 
 /**
@@ -169,9 +148,7 @@ export async function authorize(): Promise<Auth.JWT | Auth.OAuth2Client> {
   }
 
   // トークンがない場合はエラー（サーバー環境では /auth/google エンドポイントへ誘導）
-  throw new Error(
-    'No saved credentials found. Please visit /auth/google to authenticate.'
-  );
+  throw new Error('No saved credentials found. Please visit /auth/google to authenticate.');
 }
 
 /**

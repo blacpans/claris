@@ -5,8 +5,8 @@ node_modules/
 dist/
 
 # Environment
-.env
 .env.local
+.env.*.local
 
 # IDE
 .idea/
@@ -32,3 +32,6 @@ docs/SECRET_INFO.md
 # Google Auth
 .gemini/tokens.json
 credentials.json
+token.json
+*.pcm
+.env

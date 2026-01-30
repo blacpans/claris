@@ -74,4 +74,3 @@ export const STYLE_PROMPTS = {
 - エラーハンドリングを徹底し、予測可能なクラッシュ防ぐ実装を提案する。
 `.trim(),
 } as const;
-

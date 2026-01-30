@@ -4,9 +4,9 @@
  * Claris (クラリス) is an autonomous AI companion designed to assist developers.
  * She's cheerful, supportive, and loves to help with code reviews and Git operations.
  */
-import { LlmAgent, Gemini } from '@google/adk';
-import { listUpcomingEvents, createEvent, listUnreadEmails } from '../tools/index.js';
-import { loadConfig, getModelName, getStyleForExtension } from '../config/index.js';
+import { Gemini, LlmAgent } from '@google/adk';
+import { getModelName, getStyleForExtension, loadConfig } from '../config/index.js';
+import { createEvent, listUnreadEmails, listUpcomingEvents } from '../tools/index.js';
 import { CLARIS_INSTRUCTIONS, STYLE_PROMPTS } from './prompts.js';
 
 /**

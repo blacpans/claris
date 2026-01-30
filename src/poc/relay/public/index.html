@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claris Sensory Interface 🧬</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 { margin-bottom: 20px; color: #ff7eb3; text-shadow: 0 0 10px #ff7eb3; }
+        .container {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .monitor {
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        #videoPreview {
+            width: 320px;
+            height: 240px;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #555;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 5px #555;
+        }
+        .status-dot.connected { background-color: #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .status-dot.talking { background-color: #ff00ff; box-shadow: 0 0 10px #ff00ff; }
+        .status-dot.listening { background-color: #00ffff; box-shadow: 0 0 10px #00ffff; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        #btnVoice { background-color: #17a2b8; color: white; }
+        #btnVoice:hover { background-color: #138496; box-shadow: 0 0 15px #17a2b8; }
+        #btnVoice.recording { background-color: #ff6b6b; animation: pulse 1s infinite; }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #btnConnect { background-color: #007bff; color: white; }
+        #btnConnect:hover { background-color: #0056b3; box-shadow: 0 0 15px #007bff; }
+        #btnConnect:disabled { background-color: #555; cursor: not-allowed; }
+        
+        #btnDisconnect { background-color: #dc3545; color: white; }
+        #btnDisconnect:hover { background-color: #a71d2a; }
+        
+        .log-area {
+            margin-top: 20px;
+            width: 80%;
+            height: 150px;
+            background: #333;
+            color: #0f0;
+            font-family: monospace;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-y: scroll;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Claris Sensory Interface 🧬</h1>
+    
+    <div class="status-bar">
+        <span id="statusDot" class="status-dot"></span>
+        <span id="statusText">Disconnected</span>
+    </div>
+
+    <div class="container">
+        <div class="monitor">
+            <video id="videoPreview" autoplay playsinline muted></video>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button id="btnConnect">⚡ CONNECT (Soul Unison)</button>
+        <button id="btnDisconnect" disabled>🔌 DISCONNECT</button>
+    </div>
+    
+    <div class="text-input-area" style="margin-top: 15px; width: 80%; display: flex; gap: 10px;">
+        <button id="btnVoice" title="音声認識で話しかける">🎤 VOICE</button>
+        <input type="text" id="textInput" placeholder="テキストで話しかける..." 
+               style="flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #555; background: #333; color: white;">
+        <button id="btnSendText" style="background-color: #28a745; color: white;">📝 SEND</button>
+    </div>
+
+    <div class="log-area" id="logArea"></div>
+
+    <script src="client.js"></script>
+</body>
+</html>

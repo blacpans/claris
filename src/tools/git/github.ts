@@ -52,10 +52,10 @@ export async function fetchDiff(input: FetchDiffInput): Promise<string> {
   // Filter out lockfiles to save tokens and avoid truncation of important code
   // Split by "diff --git ", filter out chunks containing lockfiles, then rejoin
   const chunks = fullDiff.split('diff --git ');
-  const filteredHelper = chunks.filter(chunk => {
+  const filteredHelper = chunks.filter((chunk) => {
     if (!chunk.trim()) return true; // Keep empty prelude if any
-    const firstLine = chunk.split('\n')[0];
-    return !DEFAULT_IGNORED_FILES.some(file => firstLine.includes(file));
+    const firstLine = chunk.split('\n')[0] || '';
+    return !DEFAULT_IGNORED_FILES.some((file) => firstLine.includes(file));
   });
 
   return filteredHelper.join('diff --git ');
