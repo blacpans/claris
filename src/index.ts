@@ -10,10 +10,13 @@ const PORT = Number(process.env.PORT) || 8080;
 
 console.log('🌸 Claris is starting up...');
 
-serve({
-  fetch: app.fetch,
-  port: PORT,
-  hostname: '0.0.0.0', // IPv4での接続を確実に許可
-}, (info) => {
-  console.log(`✨ Claris is listening on http://${info.address}:${info.port}`);
-});
+serve(
+	{
+		fetch: app.fetch,
+		port: PORT,
+		hostname: '0.0.0.0', // IPv4での接続を確実に許可
+	},
+	(info) => {
+		console.log(`✨ Claris is listening on http://${info.address}:${info.port}`);
+	},
+);
