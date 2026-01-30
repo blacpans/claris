@@ -14,6 +14,8 @@ const btnDisconnect = document.getElementById('btnDisconnect');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const logArea = document.getElementById('logArea');
+const textInput = document.getElementById('textInput');
+const btnSendText = document.getElementById('btnSendText');
 
 function log(msg) {
     const div = document.createElement('div');
@@ -167,6 +169,35 @@ function playAudioChunk(base64Data) {
     nextStartTime += audioBuffer.duration;
 }
 
+// Play WAV audio (from VoiceVox)
+function playWavAudio(base64Data) {
+    if (!audioContext) return;
+    
+    // Decode Base64 to ArrayBuffer
+    const binaryString = atob(base64Data);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Decode WAV using Web Audio API
+    audioContext.decodeAudioData(bytes.buffer.slice(0), (audioBuffer) => {
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        
+        const currentTime = audioContext.currentTime;
+        if (nextStartTime < currentTime) {
+            nextStartTime = currentTime;
+        }
+        source.start(nextStartTime);
+        nextStartTime += audioBuffer.duration;
+    }, (err) => {
+        log('❌ WAV decode error: ' + err.message);
+    });
+}
+
 btnConnect.onclick = async () => {
     // Explicitly resume/start audio context on user gesture
     if (audioContext && audioContext.state === 'suspended') {
@@ -189,10 +220,22 @@ btnConnect.onclick = async () => {
         const msg = JSON.parse(event.data);
         if (msg.type === 'audio') {
             statusDot.className = 'status-dot talking';
-            playAudioChunk(msg.data);
+            
+            // Check format: 'wav' for VoiceVox, default (PCM) for Native Audio
+            if (msg.format === 'wav') {
+                playWavAudio(msg.data);
+            } else {
+                playAudioChunk(msg.data);
+            }
+            
             setTimeout(() => statusDot.className = 'status-dot connected', 200); 
+        } else if (msg.type === 'text') {
+            // Display text response from VoiceVox mode
+            log('🐰 ' + msg.data);
         } else if (msg.type === 'interrupted') {
              log('🛑 Interrupted');
+        } else if (msg.type === 'error') {
+             log('❌ ' + msg.message);
         }
     };
     
@@ -214,3 +257,24 @@ btnDisconnect.onclick = () => {
     clearInterval(videoInterval);
     statusDot.className = 'status-dot'; // Reset monitoring dot
 };
+
+// Text input send handler (for VoiceVox testing)
+btnSendText.onclick = () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log('❌ Not connected');
+        return;
+    }
+    const text = textInput.value.trim();
+    if (!text) return;
+    
+    log('📝 Sending: ' + text);
+    ws.send(JSON.stringify({ type: 'text', data: text }));
+    textInput.value = '';
+};
+
+// Allow Enter key to send text
+textInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        btnSendText.click();
+    }
+});
