@@ -1,14 +1,11 @@
 
 import { google, Auth } from 'googleapis';
+import { getCredentialStore, SavedCredentials } from './store.js';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/gmail.readonly',
 ];
-
-const CREDENTIALS_PATH = 'token.json';
-import fs from 'fs/promises';
-import path from 'path';
 
 /**
  * Type Guard for OAuth2Client
@@ -24,39 +21,32 @@ function isJWT(client: unknown): client is Auth.JWT {
   return typeof client === 'object' && client !== null && 'authorize' in client && !('fromJSON' in client);
 }
 
-/**
- * 保存されたトークン情報の型
- */
-interface SavedCredentials {
-  type: 'authorized_user';
-  client_id: string;
-  client_secret: string;
-  refresh_token: string;
-}
 
 /**
- * トークン保存パスを取得
- */
-function getTokenPath(): string {
-  return path.resolve(process.cwd(), CREDENTIALS_PATH);
-}
-
-/**
- * トークンをローカルファイルから読み込む
+ * トークンをストアから読み込む
+ * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
  */
 async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Client | null> {
   try {
-    const tokenPath = getTokenPath();
-    const content = await fs.readFile(tokenPath, 'utf-8');
-    const credentials = JSON.parse(content) as SavedCredentials;
-    const client = google.auth.fromJSON(credentials);
+    const store = getCredentialStore();
+    const credentials = await store.load();
+    if (!credentials) return null;
+
+    // googleapis の fromJSON は authorized_user 形式を期待
+    const fullCredentials = {
+      type: 'authorized_user' as const,
+      client_id: credentials.client_id || process.env.GOOGLE_CLIENT_ID || '',
+      client_secret: credentials.client_secret || process.env.GOOGLE_CLIENT_SECRET || '',
+      refresh_token: credentials.refresh_token || '',
+    };
+
+    const client = google.auth.fromJSON(fullCredentials);
 
     if (isOAuth2Client(client) || isJWT(client)) {
       return client;
     }
     return null;
   } catch {
-    // File not found or invalid
     return null;
   }
 }
@@ -95,28 +85,19 @@ function createOAuth2Client(): Auth.OAuth2Client {
 }
 
 /**
- * トークンをローカルファイルに保存する
+ * トークンをストアに保存する
+ * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
  */
 async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
   const { client_id, client_secret } = loadCredentials();
+  const store = getCredentialStore();
+
   // refresh_token がない場合は既存のものを引き継ぐ
   let refreshToken = client.credentials.refresh_token as string | undefined | null;
   if (!refreshToken) {
-    // 既存のデータを読み込む
-    const existing = await loadSavedCredentialsIfExist();
-    if (existing && 'credentials' in existing) {
-      // Note: existing is Auth.JWT or OAuth2Client. 
-      // If it's OAuth2Client, it has credentials.
-      // However, loadSavedCredentialsIfExist uses google.auth.fromJSON which returns a client.
-      // We can read the file directly to be safe, or cast existing.
-      // Let's read file directly to be simple and safe.
-      try {
-        const content = await fs.readFile(getTokenPath(), 'utf-8');
-        const saved = JSON.parse(content) as SavedCredentials;
-        refreshToken = saved.refresh_token;
-      } catch {
-        // Ignore
-      }
+    const existing = await store.load();
+    if (existing?.refresh_token) {
+      refreshToken = existing.refresh_token;
     }
   }
 
@@ -124,11 +105,11 @@ async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
     type: 'authorized_user',
     client_id,
     client_secret,
-    refresh_token: refreshToken!,
+    refresh_token: refreshToken,
   };
 
-  await fs.writeFile(getTokenPath(), JSON.stringify(payload, null, 2));
-  console.log(`[Auth] Saved Google OAuth credentials to ${CREDENTIALS_PATH}`);
+  await store.save(payload);
+  console.log('[Auth] Saved Google OAuth credentials');
 }
 
 /**

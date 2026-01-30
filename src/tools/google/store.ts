@@ -3,9 +3,13 @@ import path from 'node:path';
 import { Firestore } from '@google-cloud/firestore';
 
 /**
- * Saved credentials type (from auth.ts)
+ * Saved credentials type (for OAuth2)
+ * googleapis の authorized_user 形式と互換性を保持
  */
 export interface SavedCredentials {
+  type?: 'authorized_user';
+  client_id?: string;
+  client_secret?: string;
   access_token?: string | null;
   refresh_token?: string | null;
   scope?: string;
