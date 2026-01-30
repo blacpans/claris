@@ -34,3 +34,4 @@ docs/SECRET_INFO.md
 credentials.json
 token.json
 *.pcm
+.env
