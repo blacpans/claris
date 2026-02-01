@@ -74,7 +74,10 @@ export class FirestoreSessionService {
   }
 
   /**
-   * Lists all sessions for a user
+   * Lists all sessions for a user.
+   *
+   * Note: The returned sessions contain empty `events` and `state` to reduce payload size.
+   * Use `getSession` to retrieve full session details.
    */
   async listSessions(request: ListSessionsRequest): Promise<ListSessionsResponse> {
     const snapshot = await this.db
