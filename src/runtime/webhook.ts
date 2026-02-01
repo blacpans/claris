@@ -1,12 +1,12 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { MESSAGES } from '@/constants/messages.js';
+import { addLabels, addReviewer, createReview, fetchDiff, getPRDetails, postComment } from '@/tools/git/github.js';
 /**
  * GitHub Webhook Handler
  *
  * Handles incoming webhook events from GitHub and triggers appropriate agent actions.
  */
 import { Hono } from 'hono';
-import { MESSAGES } from '@/constants/messages.js';
-import { addLabels, addReviewer, createReview, fetchDiff, getPRDetails, postComment } from '@/tools/git/github.js';
 import { adkRunner } from './runner.js';
 
 export const webhookApp = new Hono();

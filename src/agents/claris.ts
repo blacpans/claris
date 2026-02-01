@@ -1,3 +1,5 @@
+import { getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
+import { createEvent, listUnreadEmails, listUpcomingEvents } from '@/tools/index.js';
 /**
  * Claris Agent - The NetNavi Persona 🌸
  *
@@ -5,8 +7,6 @@
  * She's cheerful, supportive, and loves to help with code reviews and Git operations.
  */
 import { Gemini, LlmAgent } from '@google/adk';
-import { getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
-import { createEvent, listUnreadEmails, listUpcomingEvents } from '@/tools/index.js';
 import { CLARIS_INSTRUCTIONS, STYLE_PROMPTS } from './prompts.js';
 
 /**

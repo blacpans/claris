@@ -67,7 +67,7 @@ export class FirestoreSessionService {
       session.events = session.events.slice(-request.config.numRecentEvents);
     }
     if (request.config?.afterTimestamp) {
-      session.events = session.events.filter((e) => e.timestamp > request.config?.afterTimestamp!);
+      session.events = session.events.filter((e) => e.timestamp > (request.config?.afterTimestamp ?? 0));
     }
 
     return session;

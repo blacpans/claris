@@ -1,9 +1,9 @@
+import { MESSAGES } from '@/constants/messages.js';
+import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
 /**
  * Hono Server - Minimal runtime for Claris
  */
 import { Hono } from 'hono';
-import { MESSAGES } from '@/constants/messages.js';
-import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
 
