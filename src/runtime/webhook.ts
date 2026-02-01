@@ -299,11 +299,11 @@ webhookApp.post('/', async (c) => {
     } else if (eventType === 'pull_request_review_comment') {
       const pr = payload.pull_request as {
         number: number;
-        title: string;
+        title?: string;
         user: { login: string };
       };
       prNumber = pr.number;
-      prTitle = pr.title;
+      prTitle = pr.title || 'Unknown PR';
       prUser = pr.user.login;
     }
 
