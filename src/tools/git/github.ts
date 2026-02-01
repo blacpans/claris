@@ -3,7 +3,7 @@
  *
  * These tools allow Claris to interact with GitHub PRs and Issues.
  */
-import { DEFAULT_IGNORED_FILES } from '../../config/defaults.js';
+import { DEFAULT_IGNORED_FILES } from '@/config/defaults.js';
 import { getGitHubClient, parseRepo } from './client.js';
 
 // Tool input/output types

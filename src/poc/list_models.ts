@@ -1,4 +1,4 @@
-import '../../src/config/env.js';
+import '@/config/env.js';
 import { GoogleGenAI } from '@google/genai';
 
 const client = new GoogleGenAI({
