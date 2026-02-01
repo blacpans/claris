@@ -19,8 +19,8 @@ export class FirestoreSessionService {
   private readonly db: Firestore;
   private readonly collectionName: string;
 
-  constructor(options?: { collectionName?: string }) {
-    this.db = new Firestore({ ignoreUndefinedProperties: true });
+  constructor(options?: { collectionName?: string; db?: Firestore }) {
+    this.db = options?.db || new Firestore({ ignoreUndefinedProperties: true });
     this.collectionName = options?.collectionName || 'claris-sessions';
   }
 
@@ -74,13 +74,17 @@ export class FirestoreSessionService {
   }
 
   /**
-   * Lists all sessions for a user
+   * Lists all sessions for a user.
+   *
+   * Note: The returned sessions contain empty `events` and `state` to reduce payload size.
+   * Use `getSession` to retrieve full session details.
    */
   async listSessions(request: ListSessionsRequest): Promise<ListSessionsResponse> {
     const snapshot = await this.db
       .collection(this.collectionName)
       .where('appName', '==', request.appName)
       .where('userId', '==', request.userId)
+      .select('id', 'appName', 'userId', 'lastUpdateTime')
       .get();
 
     const sessions: Session[] = snapshot.docs.map((doc) => {
