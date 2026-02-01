@@ -76,9 +76,10 @@ export class AudioRecorder {
           let int16Data: Int16Array;
 
           if (chunk.byteOffset % 2 !== 0 || chunk.length % 2 !== 0) {
-            const copy = Buffer.allocUnsafe(chunk.length);
-            chunk.copy(copy);
-            int16Data = new Int16Array(copy.buffer, copy.byteOffset, Math.floor(copy.length / 2));
+            const len = Math.floor(chunk.length / 2);
+            int16Data = new Int16Array(len);
+            const copy = Buffer.from(int16Data.buffer);
+            chunk.copy(copy, 0, 0, len * 2);
           } else {
             int16Data = new Int16Array(chunk.buffer, chunk.byteOffset, chunk.length / 2);
           }
