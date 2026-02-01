@@ -146,14 +146,18 @@ export class AudioPlayer extends EventEmitter {
    */
   playWav(wavData: Buffer) {
     let offset = 12; // Skip RIFF header (12 bytes)
+    let sampleRate = 24000; // Default sample rate
 
     while (offset < wavData.length) {
       const chunkId = wavData.toString('ascii', offset, offset + 4);
       const chunkSize = wavData.readUInt32LE(offset + 4);
 
-      if (chunkId === 'data') {
+      if (chunkId === 'fmt ') {
+        // fmt chunk: AudioFormat(2) + NumChannels(2) + SampleRate(4) ...
+        sampleRate = wavData.readUInt32LE(offset + 8 + 4);
+      } else if (chunkId === 'data') {
         const pcmData = wavData.subarray(offset + 8, offset + 8 + chunkSize);
-        this.playPCM(pcmData, 24000); // TODO: fmtチャンクからサンプリングレートを取得するのがベスト
+        this.playPCM(pcmData, sampleRate);
         return;
       }
 
