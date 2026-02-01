@@ -73,10 +73,18 @@ export class AudioRecorder {
 
         const checkSilence = (chunk: Buffer) => {
           let sumSquares = 0;
-          // 2バイト(16bit)ごとにサンプルを取得
-          for (let i = 0; i < chunk.length; i += 2) {
-            if (i + 1 >= chunk.length) break;
-            const int = chunk.readInt16LE(i);
+          let int16Data: Int16Array;
+
+          if (chunk.byteOffset % 2 !== 0 || chunk.length % 2 !== 0) {
+            const copy = Buffer.allocUnsafe(chunk.length);
+            chunk.copy(copy);
+            int16Data = new Int16Array(copy.buffer, copy.byteOffset, Math.floor(copy.length / 2));
+          } else {
+            int16Data = new Int16Array(chunk.buffer, chunk.byteOffset, chunk.length / 2);
+          }
+
+          for (let i = 0; i < int16Data.length; i++) {
+            const int = int16Data[i]!;
             sumSquares += int * int;
           }
           // サンプル数
