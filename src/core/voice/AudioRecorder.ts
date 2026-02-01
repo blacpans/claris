@@ -78,7 +78,9 @@ export class AudioRecorder {
           let sumSquares = 0;
           const len = Math.floor(chunk.length / 2);
 
-          // Fast path: System is Little Endian AND buffer is aligned
+          // Optimization: Use Int16Array if possible (Fast path)
+          // 1. System must be Little Endian (since audio is LE)
+          // 2. Buffer offset must be aligned to 2 bytes
           if (IS_LITTLE_ENDIAN && chunk.byteOffset % 2 === 0) {
             const int16Data = new Int16Array(chunk.buffer, chunk.byteOffset, len);
             for (let i = 0; i < int16Data.length; i++) {
@@ -86,7 +88,10 @@ export class AudioRecorder {
               sumSquares += int * int;
             }
           } else {
-            // Slow(er) path: Use DataView (Handles Unaligned & Endianness)
+            // Fallback: Use DataView (Slow path)
+            // Handles:
+            // - Big Endian systems (translates to LE)
+            // - Unaligned buffer offsets (DataView handles this safely)
             const dataView = new DataView(chunk.buffer, chunk.byteOffset, chunk.length);
             for (let i = 0; i < len; i++) {
               const int = dataView.getInt16(i * 2, true); // true = Little Endian
