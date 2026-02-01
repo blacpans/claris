@@ -22,6 +22,14 @@ if (!webhookSecretEnv) {
 // After validation, we know this is a string
 const WEBHOOK_SECRET: string = webhookSecretEnv;
 
+// Trigger context for comments
+type TriggerContext = {
+  type: 'issue_comment' | 'review_comment';
+  body: string;
+  user: string;
+  html_url: string;
+};
+
 /**
  * Verifies the GitHub webhook signature
  */
@@ -66,11 +74,14 @@ async function handlePullRequestEvent(
   repo: string,
   prTitle: string,
   prAuthor: string,
+  trigger?: TriggerContext, // New argument
 ): Promise<string> {
-  console.log(`📥 PR #${prNumber} "${prTitle}" by ${prAuthor} - Action: ${action}`);
+  const triggerInfo = trigger ? ` (Triggered by ${trigger.type} from ${trigger.user})` : '';
+  console.log(`📥 PR #${prNumber} "${prTitle}" by ${prAuthor} - Action: ${action}${triggerInfo}`);
 
   // Only process opened, synchronize (new commits), or reopened PRs
-  if (!['opened', 'synchronize', 'reopened'].includes(action)) {
+  // For comments, we treat them as 'synchronize' to trigger logic, so we allow them here if trigger is present
+  if (!['opened', 'synchronize', 'reopened'].includes(action) && !trigger) {
     return MESSAGES.WEBHOOK.SKIPPED_ACTION(action);
   }
 
@@ -87,7 +98,7 @@ async function handlePullRequestEvent(
     const prDetails = await getPRDetails({ repo, prNumber });
 
     // Prepare prompt for Claris
-    const prompt = `
+    let prompt = `
 GitHub PRレビュー依頼が来たよ！
 
 ## PR情報
@@ -98,13 +109,25 @@ GitHub PRレビュー依頼が来たよ！
 - 追加行: ${prDetails.additions}
 - 削除行: ${prDetails.deletions}
 - 変更ファイル数: ${prDetails.changedFiles}
+`;
 
+    if (trigger) {
+      prompt += `
+## 💬 ユーザーからのコメント (User Comment)
+**${trigger.user}** さんがコメントしました:
+> ${trigger.body}
+
+(リンク: ${trigger.html_url})
+
+**指示:**
+このコメントは、あなたの前回のレビューに対するフィードバックや質問、または修正の報告かもしれません。
+**このコメントの内容を踏まえて**、必要であれば返信するか、コードを再確認してレビューを行ってください。
+`;
+    }
+
+    prompt += `
 ## 差分 (Diff)
 \`\`\`diff
-    // Fetch PR diff with exclusions to avoid noise and huge payloads
-    console.log('📄 Fetching diff...');
-    const diff = await fetchDiff({ repo, prNumber });
-
 ${diff.slice(0, 300000)}${diff.length > 300000 ? '\n... (差分が長いため省略)' : ''}
 \`\`\`
 
@@ -150,6 +173,8 @@ ${diff.slice(0, 300000)}${diff.length > 300000 ? '\n... (差分が長いため�
     }
 
     // Determine event and labels
+    // If triggered by comment, defaulting to COMMENT status unless AI explicitly changes it is safer,
+    // but AI logic should handle it.
     const reviewEvent = reviewData.status as 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
     let labels: string[] = [];
     if (reviewEvent === 'APPROVE') labels = ['approved'];
@@ -157,11 +182,17 @@ ${diff.slice(0, 300000)}${diff.length > 300000 ? '\n... (差分が長いため�
 
     // Create the review with proper status
     console.log(`📝 Creating review (${reviewEvent})...`);
+
+    let bodyPrefix: string = MESSAGES.WEBHOOK.REVIEW_HEADER;
+    if (trigger) {
+      bodyPrefix = `### 🤖 ${trigger.user}さんのコメントへの返信\n\n`;
+    }
+
     const reviewResult = await createReview({
       repo,
       prNumber,
       event: reviewEvent,
-      body: `${MESSAGES.WEBHOOK.REVIEW_HEADER}${reviewData.comment}`,
+      body: `${bodyPrefix}${reviewData.comment}`,
     });
     console.log('✅ Review created:', reviewResult);
 
@@ -236,23 +267,50 @@ webhookApp.post('/', async (c) => {
     return c.json({ message: MESSAGES.WEBHOOK.PONG });
   }
 
-  // Other events
-  if (eventType === 'issue_comment') {
+  // Handle comments (Issue Comment & Pull Request Review Comment)
+  if (eventType === 'issue_comment' || eventType === 'pull_request_review_comment') {
     const action = payload.action as string;
-    const issue = payload.issue as {
-      number: number;
-      pull_request?: unknown;
-      title: string;
-      user: { login: string };
-    };
+
+    // Normalize payload structure
     const comment = payload.comment as {
       body: string;
       user: { login: string };
+      html_url: string;
     };
 
-    // Only process created comments on PRs
-    if (action === 'created' && issue.pull_request) {
+    // For issue_comment: payload.issue.pull_request exists if it's a PR
+    // For pull_request_review_comment: payload.pull_request exists
+    let prNumber: number | undefined;
+    let prTitle = 'Unknown PR'; // Title might not be available in review_comment payload easily without fetch, defaulting
+    let prUser = 'Unknown Author';
+
+    if (eventType === 'issue_comment') {
+      const issue = payload.issue as {
+        number: number;
+        pull_request?: unknown;
+        title: string;
+        user: { login: string };
+      };
+      if (issue.pull_request) {
+        prNumber = issue.number;
+        prTitle = issue.title;
+        prUser = issue.user.login;
+      }
+    } else if (eventType === 'pull_request_review_comment') {
+      const pr = payload.pull_request as {
+        number: number;
+        title: string;
+        user: { login: string };
+      };
+      prNumber = pr.number;
+      prTitle = pr.title;
+      prUser = pr.user.login;
+    }
+
+    // Only process newly created comments on PRs
+    if (action === 'created' && prNumber) {
       const botName = process.env.CLARIS_NAME || 'Claris';
+      const targetPrNumber = prNumber;
 
       // Check if bot is mentioned (case insensitive)
       // Also ensure we don't reply to ourselves (though usually bot token differs)
@@ -262,13 +320,22 @@ webhookApp.post('/', async (c) => {
 
       if (isMentioned) {
         console.log(
-          `🤖 Bot mentioned in comment on PR #${issue.number} by ${comment.user.login}. Triggering re-review...`,
+          `🤖 Bot mentioned in ${eventType} on PR #${targetPrNumber} by ${comment.user.login}. Triggering reply/review...`,
         );
+
+        const triggerContext: TriggerContext = {
+          type: eventType === 'issue_comment' ? 'issue_comment' : 'review_comment',
+          body: comment.body,
+          user: comment.user.login,
+          html_url: comment.html_url,
+        };
 
         // Use setImmediate for async processing
         setImmediate(() => {
-          // Treat as a 'synchronize' event to trigger a fresh review
-          handlePullRequestEvent('synchronize', issue.number, repo, issue.title, issue.user.login).catch(console.error);
+          // Treat as a 'synchronize' event (logically) but pass trigger context
+          handlePullRequestEvent('synchronize', targetPrNumber, repo, prTitle, prUser, triggerContext).catch(
+            console.error,
+          );
         });
 
         return c.json({
