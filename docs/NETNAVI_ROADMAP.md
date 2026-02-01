@@ -25,20 +25,23 @@ Claris を単なる「便利ツール」から、常に開発者に寄り添う�
 
 ### Lv.3：常駐する「相棒」（自律・人格・音声）🗣️
 **Goal:** 常にそこにいて、向こうから話しかけてくる。リアルタイム音声対話。
-**技術スタック (Google Cloud AI Hackathon 推奨構成):**
+**現状:** 🚧 Lv.3.1 達成 (CLIでのNative/VoiceVox会話機能実装済み)
+**技術スタック:**
 - **脳 (Brain):** Cloud Run + ADK + **Gemini 2.0 (Multimodal Live API)**
 - **耳と口 (Interface):**
-  - **PC:** CLI / Tauri App
-  - **Mobile:** Flutter / PWA (WebSocket で音声ストリーミング)
+  - **PC:** CLI (`claris live`) - ✅ Implemented (Native/VoiceVox)
+  - **Mobile:** Flutter / PWA (WebSocket で音声ストリーミング) - 🚧 Next
 - **神経 (Notification):** Firebase Cloud Messaging (FCM)
 
 ## 🛠️ 技術戦略 (Tech Stack Strategy)
 
 ### 1. 省エネ & リアルタイム音声対話 (Multimodal Live API) ⚡
+**Status:** ✅ Implemented (Native/VoiceVox modes)
 スマホやPCのリソースを使わず、Google のサーバー側で音声処理を行う。
 - **スマホ:** 単なる「トランシーバー」（マイク入力＆スピーカー出力のみ）
 - **Cloud Run:** WebSocket で音声を受け取り、Gemini 2.0 と直接会話させる
 - **メリット:** 爆速レスポンス（人間と会話するレベル）、スマホのバッテリー消費低減
+- **VoiceVox:** Geminiのテキスト出力をVoiceVoxで音声化するモードも実装済み
 
 ### 2. 能動的なアクション (Active Notification) 🔔
 AI から人間への「割り込み」を実現する。
@@ -50,9 +53,10 @@ AI から人間への「割り込み」を実現する。
   - まずは **「ホットキー長押し」** や **「ウェイクワード」** で聞き耳モードにする運用が現実的
 
 ## 🚀 直近のアクションプラン (Next Actions)
-1. **Multimodal Live API の調査**: Cloud Run 上で WebSocket サーバーを立てて、Gemini 2.0 と音声会話できるかプロトタイプ作成
-2. **ADK の活用**: 現在の `src/runtime/runner.ts` を拡張し、音声入力にも対応できるようにする
-3. **Google連携**: Calendar / Gmail API を使えるようにツールを追加する
+1. **[DONE] Multimodal Live API の調査 & 実装**: Cloud Run でなくとも、まずはCLIでGemini 2.0と音声会話できる環境を構築完了 (Native/VoiceVox)
+2. **[DONE] ADK の活用**: `LiveSession` クラスによるストリーミング実装完了
+3. **[NEXT] Google連携**: Calendar / Gmail API を使えるようにツールを追加する
+4. **[NEXT] Mobileアプリ化**: CLIのロジックをベースに、スマホから話しかけられるようにする
 
 ---
 > 「需要あるかな…」なんて悩んでる場合じゃないよ先輩！

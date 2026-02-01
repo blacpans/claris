@@ -28,7 +28,18 @@ graph LR
     C --> D[Gemini 3 Pro Preview]
     C --> E[Firestore Sessions]
     B --> F[GitHub API - Post Comment]
+    
+    subgraph CLI[Local CLI]
+        G[User Voice] --> H[AudioRecorder]
+        H --> I[LiveSession]
+        I --WebSocket--> J[Gemini Multimodal Live API]
+        J --Audio/Text--> I
+        I --> K[AudioPlayer/VoiceVox]
+        K --> L[Speaker]
+    end
 ```
+
+### 主要ファイル
 
 ### 主要ファイル
 
@@ -41,6 +52,8 @@ graph LR
 | `src/agents/claris.ts` | Claris エージェント定義 |
 | `src/sessions/firestoreSession.ts` | Firestore セッション永続化 |
 | `src/tools/git/github.ts` | GitHub API ツール群 |
+| `src/core/live/LiveSession.ts` | CLI音声モード (`claris live`) |
+| `src/core/voice/*` | 音声録音・再生 (Native/VoiceVox) |
 
 ---
 
