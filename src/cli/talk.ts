@@ -42,7 +42,8 @@ export function registerTalk(program: Command) {
       } catch (error) {
         if (
           error instanceof Error &&
-          (error.message.includes('fetch failed') || (error as any).cause?.code === 'ECONNREFUSED')
+          (error.message.includes('fetch failed') ||
+            (error as { cause?: { code?: string } }).cause?.code === 'ECONNREFUSED')
         ) {
           console.error(chalk.red(CLI_MESSAGES.ERRORS.CONNECTION_REFUSED));
         } else {

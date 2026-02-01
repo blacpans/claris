@@ -1,6 +1,6 @@
-import { InMemoryRunner } from '@google/adk';
 import { createClarisAgent } from '@/agents/claris.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
+import { InMemoryRunner } from '@google/adk';
 
 const APP_NAME = 'claris';
 

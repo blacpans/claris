@@ -23,7 +23,7 @@ export async function listUnreadEmailsFn({ maxResults = 5 }: { maxResults?: numb
     messages.map(async (msg) => {
       const detail = await gmail.users.messages.get({
         userId: 'me',
-        id: msg.id!,
+        id: msg.id || '', // Fallback or strict check
         format: 'metadata',
         metadataHeaders: ['Subject', 'From', 'Date'],
       });
