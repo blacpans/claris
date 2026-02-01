@@ -12,7 +12,8 @@
     "start": "tsx src/index.ts",
     "build": "tsc && tsc-alias",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "prepare": "husky"
   },
   "keywords": ["adk", "agent", "netnavi", "gemini"],
   "author": "blacpans",
@@ -40,11 +41,16 @@
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.13.1",
     "@types/ws": "^8.18.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "lint-staged": {
+    "*": ["biome check --write --no-errors-on-unmatched", "biome format --write --no-errors-on-unmatched"]
   }
 }
