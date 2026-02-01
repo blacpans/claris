@@ -1,10 +1,13 @@
 import type { Readable } from 'node:stream';
+import { endianness } from 'node:os';
 import record from 'node-record-lpcm16';
 
 interface AudioRecordProcess {
   stream(): Readable;
   stop(): void;
 }
+
+const IS_LITTLE_ENDIAN = endianness() === 'LE';
 
 /**
  * マイク入力を制御するクラス
@@ -73,16 +76,30 @@ export class AudioRecorder {
 
         const checkSilence = (chunk: Buffer) => {
           let sumSquares = 0;
-          // 2バイト(16bit)ごとにサンプルを取得
-          for (let i = 0; i < chunk.length; i += 2) {
-            if (i + 1 >= chunk.length) break;
-            const int = chunk.readInt16LE(i);
-            sumSquares += int * int;
-          }
-          // サンプル数
-          const numSamples = chunk.length / 2;
-          const rms = Math.sqrt(sumSquares / numSamples);
+          const len = Math.floor(chunk.length / 2);
 
+          // Optimization: Use Int16Array if possible (Fast path)
+          // 1. System must be Little Endian (since audio is LE)
+          // 2. Buffer offset must be aligned to 2 bytes
+          if (IS_LITTLE_ENDIAN && chunk.byteOffset % 2 === 0) {
+            const int16Data = new Int16Array(chunk.buffer, chunk.byteOffset, len);
+            for (let i = 0; i < int16Data.length; i++) {
+              const int = int16Data[i]!;
+              sumSquares += int * int;
+            }
+          } else {
+            // Fallback: Use DataView (Slow path)
+            // Handles:
+            // - Big Endian systems (translates to LE)
+            // - Unaligned buffer offsets (DataView handles this safely)
+            const dataView = new DataView(chunk.buffer, chunk.byteOffset, chunk.length);
+            for (let i = 0; i < len; i++) {
+              const int = dataView.getInt16(i * 2, true); // true = Little Endian
+              sumSquares += int * int;
+            }
+          }
+
+          const rms = Math.sqrt(sumSquares / len);
           return rms;
         };
 
