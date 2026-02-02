@@ -89,11 +89,11 @@ export class AdkRunnerService {
     let eventIndex = 0;
 
     try {
+      let eventCount = 0;
       for await (const event of events) {
+        eventCount++;
         if (session) {
-          console.log(`[Runner] Event: ${JSON.stringify(event)}`);
-          // Attach timestamp immediately to capture generation time
-          // Use incrementing index to prevent collision (Date.now() can be identical in fast loops)
+          console.log(`[Runner] Event #${eventCount}: ${JSON.stringify(event)}`);
           if (!event.timestamp) {
             event.timestamp = baseTime + eventIndex++;
           }
@@ -109,6 +109,11 @@ export class AdkRunnerService {
           }
         }
       }
+      console.log(`[Runner] Finished loop. Total events: ${eventCount}, Total text length: ${responseText.length}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      console.error(`[Runner] Error in generation loop: ${message}`, e);
+      throw e; // Webhook handler will catch this
     } finally {
       // Ensure all events are persisted before returning (batched for performance and order consistency)
       // Even if the loop fails, we save what we have buffered so far.
