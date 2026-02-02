@@ -3,6 +3,7 @@ import { type SavedCredentials, getCredentialStore } from './store.js';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/gmail.readonly'];
 
+// メモリ上のキャッシュされたクライアント
 let cachedClient: Auth.JWT | Auth.OAuth2Client | null = null;
 
 /**
@@ -24,6 +25,7 @@ function isJWT(client: unknown): client is Auth.JWT {
  * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
  */
 async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Client | null> {
+  // キャッシュがあればそれを返す
   if (cachedClient) {
     return cachedClient;
   }
@@ -111,6 +113,7 @@ async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
   };
 
   await store.save(payload);
+  // 新しいクレデンシャル保存時にキャッシュを無効化
   cachedClient = null;
   console.log('[Auth] Saved Google OAuth credentials');
 }
