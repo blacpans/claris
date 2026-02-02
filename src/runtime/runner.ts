@@ -66,13 +66,19 @@ export class AdkRunnerService {
 
     // Collect response content
     let responseText = '';
+    const pendingWrites: Promise<unknown>[] = [];
     for await (const event of events) {
       if (session) {
         console.log(`[Runner] Event: ${JSON.stringify(event)}`);
-        await this.sessionService.appendEvent({
-          session,
-          event,
-        });
+        pendingWrites.push(
+          this.sessionService
+            .appendEvent({
+              session,
+              event,
+            })
+            .then(() => null)
+            .catch((err) => err),
+        );
       }
 
       // Extract text content from agent responses
@@ -82,6 +88,14 @@ export class AdkRunnerService {
             responseText += part.text;
           }
         }
+      }
+    }
+
+    // Ensure all events are persisted before returning
+    const results = await Promise.all(pendingWrites);
+    for (const result of results) {
+      if (result) {
+        throw result;
       }
     }
 
