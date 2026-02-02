@@ -72,6 +72,10 @@ export class AdkRunnerService {
       for await (const event of events) {
         if (session) {
           console.log(`[Runner] Event: ${JSON.stringify(event)}`);
+          // Attach timestamp immediately to capture generation time
+          if (!event.timestamp) {
+            event.timestamp = Date.now();
+          }
           bufferedEvents.push(event);
         }
 
