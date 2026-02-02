@@ -14,6 +14,7 @@
 ### 🛠️ Infrastructure & Refactoring
 - [x] **No Any Policy**: `biome.json` で `noExplicitAny` を有効化し、`LiveSession.ts` 等を完全型定義
 - [x] **Cleanup**: 不要なPoCコード (`src/poc`) の削除
+- [x] **Re-review on Comment**: PRコメントに反応してAIが再レビュー (PR #14)
 
 ---
 
@@ -21,6 +22,8 @@
 ネットナビへの進化に必要な次の一手ダヨ！💎
 
 ### 📱 Interface Expansion
+- [ ] **Infrastructure Optimization**:
+    - [ ] **Diff Fetch Optimization**: Chat vs Review mode to save tokens (Issue #15)
 - [ ] **Mobile App (Flutter/PWA)**:
     - WebSocketでCloud Runに接続し、スマホから音声対話。
     - CLIのロジックを流用。
