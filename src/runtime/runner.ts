@@ -1,6 +1,6 @@
 import { createClarisAgent } from '@/agents/claris.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
-import { InMemoryRunner } from '@google/adk';
+import { type Event, InMemoryRunner } from '@google/adk';
 
 const APP_NAME = 'claris';
 
@@ -66,22 +66,41 @@ export class AdkRunnerService {
 
     // Collect response content
     let responseText = '';
-    for await (const event of events) {
-      if (session) {
-        console.log(`[Runner] Event: ${JSON.stringify(event)}`);
-        await this.sessionService.appendEvent({
-          session,
-          event,
-        });
-      }
+    const bufferedEvents: Event[] = [];
 
-      // Extract text content from agent responses
-      if (event.author === agent.name && event.content?.parts) {
-        for (const part of event.content.parts) {
-          if ('text' in part && part.text) {
-            responseText += part.text;
+    // Use a base time and counter to ensure unique timestamps even in high-speed loops
+    const baseTime = Date.now();
+    let eventIndex = 0;
+
+    try {
+      for await (const event of events) {
+        if (session) {
+          console.log(`[Runner] Event: ${JSON.stringify(event)}`);
+          // Attach timestamp immediately to capture generation time
+          // Use incrementing index to prevent collision (Date.now() can be identical in fast loops)
+          if (!event.timestamp) {
+            event.timestamp = baseTime + eventIndex++;
+          }
+          bufferedEvents.push(event);
+        }
+
+        // Extract text content from agent responses
+        if (event.author === agent.name && event.content?.parts) {
+          for (const part of event.content.parts) {
+            if ('text' in part && part.text) {
+              responseText += part.text;
+            }
           }
         }
+      }
+    } finally {
+      // Ensure all events are persisted before returning (batched for performance and order consistency)
+      // Even if the loop fails, we save what we have buffered so far.
+      if (session && bufferedEvents.length > 0) {
+        await this.sessionService.appendEvents({
+          session,
+          events: bufferedEvents,
+        });
       }
     }
 
