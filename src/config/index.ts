@@ -53,8 +53,8 @@ export async function loadConfig(): Promise<ClarisConfig> {
  * モデル名に変換する
  */
 export function getModelName(rapid: ClarisConfig['rapid']): string {
-  const proModel = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
-  return rapid === 'pro' ? proModel : 'gemini-1.5-flash';
+  const proModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
+  return rapid === 'pro' ? proModel : 'gemini-3-flash-preview';
 }
 
 /**
