@@ -68,13 +68,18 @@ export class AdkRunnerService {
     let responseText = '';
     const bufferedEvents: Event[] = [];
 
+    // Use a base time and counter to ensure unique timestamps even in high-speed loops
+    const baseTime = Date.now();
+    let eventIndex = 0;
+
     try {
       for await (const event of events) {
         if (session) {
           console.log(`[Runner] Event: ${JSON.stringify(event)}`);
           // Attach timestamp immediately to capture generation time
+          // Use incrementing index to prevent collision (Date.now() can be identical in fast loops)
           if (!event.timestamp) {
-            event.timestamp = Date.now();
+            event.timestamp = baseTime + eventIndex++;
           }
           bufferedEvents.push(event);
         }
