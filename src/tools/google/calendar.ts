@@ -7,24 +7,37 @@ const listUpcomingEventsSchema = z.object({
 });
 
 export async function listUpcomingEventsFn({ maxResults = 10 }: { maxResults?: number }) {
-  const calendar = await getCalendarClient();
-  const res = await calendar.events.list({
-    calendarId: 'primary',
-    timeMin: new Date().toISOString(),
-    maxResults,
-    singleEvents: true,
-    orderBy: 'startTime',
-  });
-  const events = res.data.items;
-  if (!events || events.length === 0) {
-    return 'No upcoming events found.';
+  try {
+    const calendar = await getCalendarClient();
+    const res = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: new Date().toISOString(),
+      maxResults,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+    const events = res.data.items;
+    if (!events || events.length === 0) {
+      return 'No upcoming events found.';
+    }
+    return events
+      .map((event) => {
+        const start = event.start?.dateTime || event.start?.date;
+        return `${start} - ${event.summary}`;
+      })
+      .join('\n');
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: number };
+    if (
+      err.message?.includes('No saved credentials found') ||
+      err.message?.includes('invalid_grant') ||
+      err.code === 401 ||
+      err.code === 403
+    ) {
+      return 'Google Calendarの認証ができていないか、期限切れみたいだよ💦\nサーバー管理者（あなた）に `/auth/google` にアクセスして認証するようお願いしてね！';
+    }
+    return `エラーが発生しちゃった💦: ${err.message || String(error)}`;
   }
-  return events
-    .map((event) => {
-      const start = event.start?.dateTime || event.start?.date;
-      return `${start} - ${event.summary}`;
-    })
-    .join('\n');
 }
 
 export const listUpcomingEvents = new FunctionTool({
@@ -69,6 +82,15 @@ export async function createEventFn({
     });
     return `Event created: ${res.data.htmlLink}`;
   } catch (error: unknown) {
+    const err = error as { message?: string; code?: number };
+    if (
+      err.message?.includes('No saved credentials found') ||
+      err.message?.includes('invalid_grant') ||
+      err.code === 401 ||
+      err.code === 403
+    ) {
+      return 'Google Calendarの認証ができていないか、期限切れみたいだよ💦\nサーバー管理者（あなた）に `/auth/google` にアクセスして認証するようお願いしてね！';
+    }
     const errorMessage = error instanceof Error ? error.message : String(error);
     return `Failed to create event: ${errorMessage}`;
   }
