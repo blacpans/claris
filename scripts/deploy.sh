@@ -8,11 +8,32 @@ echo "🚀 Starting deployment..."
 # Load env vars
 # .env.local overrides .env
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+  while IFS='=' read -r key value; do
+    # Skip comments and empty lines
+    if [[ $key =~ ^# ]] || [[ -z $key ]]; then continue; fi
+    # Remove leading/trailing whitespace
+    key=$(echo $key | xargs)
+    value=$(echo $value | xargs)
+    # Remove quotes
+    value=${value%\"}
+    value=${value#\"}
+    value=${value%\'}
+    value=${value#\'}
+    export "$key=$value"
+  done < .env
 fi
 
 if [ -f .env.local ]; then
-  export $(grep -v '^#' .env.local | xargs)
+  while IFS='=' read -r key value; do
+    if [[ $key =~ ^# ]] || [[ -z $key ]]; then continue; fi
+    key=$(echo $key | xargs)
+    value=$(echo $value | xargs)
+    value=${value%\"}
+    value=${value#\"}
+    value=${value%\'}
+    value=${value#\'}
+    export "$key=$value"
+  done < .env.local
 fi
 
 # Check required variables
