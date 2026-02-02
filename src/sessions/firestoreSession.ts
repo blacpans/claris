@@ -145,11 +145,13 @@ export class FirestoreSessionService {
       .collection(this.collectionName)
       .doc(this.buildDocId(session.appName, session.userId, session.id));
 
+    const now = Date.now();
     const eventsWithTimestamp = events.map(
-      (event) =>
+      (event, index) =>
         ({
           ...event,
-          timestamp: event.timestamp || Date.now(),
+          // Add index to timestamp to ensure uniqueness and preserve order within the batch
+          timestamp: event.timestamp || now + index,
         }) as Event,
     );
 

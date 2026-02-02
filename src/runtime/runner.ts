@@ -68,28 +68,31 @@ export class AdkRunnerService {
     let responseText = '';
     const bufferedEvents: Event[] = [];
 
-    for await (const event of events) {
-      if (session) {
-        console.log(`[Runner] Event: ${JSON.stringify(event)}`);
-        bufferedEvents.push(event);
-      }
+    try {
+      for await (const event of events) {
+        if (session) {
+          console.log(`[Runner] Event: ${JSON.stringify(event)}`);
+          bufferedEvents.push(event);
+        }
 
-      // Extract text content from agent responses
-      if (event.author === agent.name && event.content?.parts) {
-        for (const part of event.content.parts) {
-          if ('text' in part && part.text) {
-            responseText += part.text;
+        // Extract text content from agent responses
+        if (event.author === agent.name && event.content?.parts) {
+          for (const part of event.content.parts) {
+            if ('text' in part && part.text) {
+              responseText += part.text;
+            }
           }
         }
       }
-    }
-
-    // Ensure all events are persisted before returning (batched for performance and order consistency)
-    if (session && bufferedEvents.length > 0) {
-      await this.sessionService.appendEvents({
-        session,
-        events: bufferedEvents,
-      });
+    } finally {
+      // Ensure all events are persisted before returning (batched for performance and order consistency)
+      // Even if the loop fails, we save what we have buffered so far.
+      if (session && bufferedEvents.length > 0) {
+        await this.sessionService.appendEvents({
+          session,
+          events: bufferedEvents,
+        });
+      }
     }
 
     return responseText || 'Clarisからの応答がありませんでした。';
