@@ -164,6 +164,25 @@ export class FirestoreSessionService {
   }
 
   /**
+   * Updates a session's state in Firestore
+   */
+  async updateSession(request: { session: Session; state?: Record<string, unknown> }): Promise<void> {
+    const docRef = this.db
+      .collection(this.collectionName)
+      .doc(this.buildDocId(request.session.appName, request.session.userId, request.session.id));
+
+    const updates: Record<string, unknown> = {
+      lastUpdateTime: Date.now(),
+    };
+
+    if (request.state) {
+      updates.state = this.removeUndefined(request.state);
+    }
+
+    await docRef.update(updates);
+  }
+
+  /**
    * Builds a unique document ID for a session
    */
   private buildDocId(appName: string, userId: string, sessionId: string): string {

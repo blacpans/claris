@@ -20,7 +20,11 @@ export class AdkRunnerService {
     userId: string;
     sessionId: string;
     message: string;
-    context?: { activeFile?: string }; // 🦀 Context for Soul Unison
+    context?: {
+      activeFile?: string;
+      mode?: 'chat' | 'review' | string;
+      diff?: string;
+    };
   }): Promise<string> {
     // 毎回設定を読み込むことで、ナビカスの調整を即時反映する
     // Context を渡して適切なソウルを共鳴させる
@@ -47,11 +51,23 @@ export class AdkRunnerService {
       appName: APP_NAME,
     });
 
-    // For now, create a temporary session in the InMemoryRunner
+    // 📝 Ephemeral State: Prepare state for InMemoryRunner
+    // We inject the diff here so it's available for ${diff} substitution,
+    // but we do NOT save it to Firestore, ensuring it remains truly ephemeral.
+    let runnerState = session.state;
+    if (options.context?.diff) {
+      runnerState = {
+        ...runnerState,
+        diff: options.context.diff,
+      };
+    }
+
+    // Initialize session in the InMemoryRunner with our state
     await runner.sessionService.createSession({
       appName: APP_NAME,
       userId: options.userId,
       sessionId: options.sessionId,
+      state: runnerState,
     });
 
     // Execute the agent turn
@@ -96,11 +112,13 @@ export class AdkRunnerService {
     } finally {
       // Ensure all events are persisted before returning (batched for performance and order consistency)
       // Even if the loop fails, we save what we have buffered so far.
-      if (session && bufferedEvents.length > 0) {
-        await this.sessionService.appendEvents({
-          session,
-          events: bufferedEvents,
-        });
+      if (session) {
+        if (bufferedEvents.length > 0) {
+          await this.sessionService.appendEvents({
+            session,
+            events: bufferedEvents,
+          });
+        }
       }
     }
 
