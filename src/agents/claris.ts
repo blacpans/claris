@@ -7,11 +7,8 @@ import { createEvent, listUnreadEmails, listUpcomingEvents } from '@/tools/index
  * She's cheerful, supportive, and loves to help with code reviews and Git operations.
  */
 import { Gemini, LlmAgent } from '@google/adk';
-import { CLARIS_INSTRUCTIONS, STYLE_PROMPTS } from './prompts.js';
+import { CLARIS_INSTRUCTIONS, REVIEW_CONTEXT_INSTRUCTION, STYLE_PROMPTS } from './prompts.js';
 
-/**
- * Claris Agent - The NetNavi Persona 🌸
- */
 export type AgentMode = 'chat' | 'review' | string;
 
 export interface ClarisContext {
@@ -52,8 +49,7 @@ export async function createClarisAgent(context?: ClarisContext) {
   if (mode === 'review' && context?.diff) {
     // We use ${diff} template variable which ADK will replace with the content from session.state.diff
     // This avoids issues with template injection vulnerabilities in the code diff itself
-    instruction +=
-      '\n\n# PR Review Context\nHere is the diff of the Pull Request you are reviewing:\n\n```diff\n${diff}\n```\n\nFocus on this diff to provide your review. This is ephemeral context for this turn only.';
+    instruction += `\n\n${REVIEW_CONTEXT_INSTRUCTION}`;
   }
 
   // 🛠️ Tool Selection

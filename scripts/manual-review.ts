@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { generatePRReviewPrompt } from '../src/agents/prompts.js';
 import { adkRunner } from '../src/runtime/runner.js';
 import { fetchDiff, getPRDetails } from '../src/tools/git/github.js';
 
@@ -18,33 +19,8 @@ async function main() {
     console.log(`✅ Fetched PR: "${prDetails.title}"`);
     console.log(`✅ Diff length: ${diff.length} chars`);
 
-    // Prepare prompt (Simplified from webhook.ts)
-    const prompt = `
-GitHub PRレビュー依頼が来たよ！
-
-## PR情報
-- リポジトリ: ${repo}
-- PR番号: #${prNumber}
-- タイトル: ${prDetails.title}
-- 作成者: ${prDetails.author}
-- 追加行: ${prDetails.additions}
-- 削除行: ${prDetails.deletions}
-- 変更ファイル数: ${prDetails.changedFiles}
-
-**指示:**
-提供されたPRのDiff（System Contextにあります）を確認し、コードレビューを行ってください。
-問題点や改善提案があればコメントを作成してください。
-
-# 重要: 出力フォーマット
-必ず以下の **JSONフォーマット** で出力して！マークダウンのコードブロックで囲むこと。
-
-\`\`\`json
-{
-  "status": "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
-  "comment": "レビューコメントの内容（Markdown形式）"
-}
-\`\`\`
-`;
+    // Prepare prompt using shared logic
+    const prompt = generatePRReviewPrompt(repo, prNumber, prDetails.title, prDetails.author, prDetails);
 
     console.log('🚀 Sending request to Claris (Mode: review)...');
 

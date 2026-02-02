@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { generatePRReviewPrompt } from '@/agents/prompts.js';
 import { MESSAGES } from '@/constants/messages.js';
 import { addLabels, addReviewer, createReview, fetchDiff, getPRDetails, postComment } from '@/tools/git/github.js';
 /**
@@ -98,54 +99,20 @@ async function handlePullRequestEvent(
     const prDetails = await getPRDetails({ repo, prNumber });
 
     // Prepare prompt for Claris (without Diff)
-    let prompt = `
-GitHub PRレビュー依頼が来たよ！
-
-## PR情報
-- リポジトリ: ${repo}
-- PR番号: #${prNumber}
-- タイトル: ${prTitle}
-- 作成者: ${prAuthor}
-- 追加行: ${prDetails.additions}
-- 削除行: ${prDetails.deletions}
-- 変更ファイル数: ${prDetails.changedFiles}
-`;
-
-    if (trigger) {
-      prompt += `
-## 💬 ユーザーからのコメント (User Comment)
-**${trigger.user}** さんがコメントしました:
-> ${trigger.body}
-
-(リンク: ${trigger.html_url})
-
-**指示:**
-このコメントは、あなたの前回のレビューに対するフィードバックや質問、または修正の報告かもしれません。
-**このコメントの内容を踏まえて**、必要であれば返信するか、コードを再確認してレビューを行ってください。
-`;
-    } else {
-      prompt += `
-**指示:**
-提供されたPRのDiff（System Contextにあります）を確認し、コードレビューを行ってください。
-問題点や改善提案があればコメントを作成してください。
-`;
-    }
-
-    prompt += `
-# 重要: 出力フォーマット
-必ず以下の **JSONフォーマット** で出力して！マークダウンのコードブロックで囲むこと。
-
-\`\`\`json
-{
-  "status": "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
-  "comment": "レビューコメントの内容（Markdown形式）"
-}
-\`\`\`
-
-- **APPROVE**: 問題がなく、すぐにマージできる場合（LGTM）
-- **REQUEST_CHANGES**: 修正が必要な問題（バグ、セキュリティリスク、設計ミスなど）がある場合
-- **COMMENT**: 質問や提案のみで、マージをブロックする必要がない場合
-`;
+    const prompt = generatePRReviewPrompt(
+      repo,
+      prNumber,
+      prTitle,
+      prAuthor,
+      prDetails,
+      trigger
+        ? {
+            user: trigger.user,
+            body: trigger.body,
+            html_url: trigger.html_url,
+          }
+        : undefined,
+    );
 
     // Run Claris agent to analyze the PR
     console.log('🤖 Asking Claris to review...');
