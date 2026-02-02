@@ -1,6 +1,6 @@
 import { createClarisAgent } from '@/agents/claris.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
-import { InMemoryRunner } from '@google/adk';
+import { type Event, InMemoryRunner } from '@google/adk';
 
 const APP_NAME = 'claris';
 
@@ -66,19 +66,12 @@ export class AdkRunnerService {
 
     // Collect response content
     let responseText = '';
-    const pendingWrites: Promise<unknown>[] = [];
+    const bufferedEvents: Event[] = [];
+
     for await (const event of events) {
       if (session) {
         console.log(`[Runner] Event: ${JSON.stringify(event)}`);
-        pendingWrites.push(
-          this.sessionService
-            .appendEvent({
-              session,
-              event,
-            })
-            .then(() => null)
-            .catch((err) => err),
-        );
+        bufferedEvents.push(event);
       }
 
       // Extract text content from agent responses
@@ -91,12 +84,12 @@ export class AdkRunnerService {
       }
     }
 
-    // Ensure all events are persisted before returning
-    const results = await Promise.all(pendingWrites);
-    for (const result of results) {
-      if (result) {
-        throw result;
-      }
+    // Ensure all events are persisted before returning (batched for performance and order consistency)
+    if (session && bufferedEvents.length > 0) {
+      await this.sessionService.appendEvents({
+        session,
+        events: bufferedEvents,
+      });
     }
 
     return responseText || 'Clarisからの応答がありませんでした。';

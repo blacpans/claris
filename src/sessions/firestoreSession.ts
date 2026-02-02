@@ -136,6 +136,32 @@ export class FirestoreSessionService {
   }
 
   /**
+   * Appends multiple events to a session in a single batch
+   */
+  async appendEvents({ session, events }: { session: Session; events: Event[] }): Promise<Event[]> {
+    if (events.length === 0) return [];
+
+    const docRef = this.db
+      .collection(this.collectionName)
+      .doc(this.buildDocId(session.appName, session.userId, session.id));
+
+    const eventsWithTimestamp = events.map(
+      (event) =>
+        ({
+          ...event,
+          timestamp: event.timestamp || Date.now(),
+        }) as Event,
+    );
+
+    await docRef.update({
+      events: FieldValue.arrayUnion(...eventsWithTimestamp.map((e) => this.removeUndefined(e))),
+      lastUpdateTime: Date.now(),
+    });
+
+    return eventsWithTimestamp;
+  }
+
+  /**
    * Builds a unique document ID for a session
    */
   private buildDocId(appName: string, userId: string, sessionId: string): string {
