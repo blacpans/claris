@@ -60,7 +60,7 @@ export async function createClarisAgent(context?: ClarisContext) {
       : [listUpcomingEvents, createEvent, listUnreadEmails];
 
   return new LlmAgent({
-    name: agentName.toLowerCase(),
+    name: agentName.toLowerCase().replace(/-/g, '_'),
     model,
     instruction,
     tools,
