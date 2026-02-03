@@ -25,6 +25,85 @@ export const CLARIS_INSTRUCTIONS = `
 `.trim();
 
 /**
+ * Review Mode Context Instruction
+ * PRレビューモード時にシステムインストラクションに追加されるコンテキスト
+ * \${diff} は ADK (Runner Session) によって動的に置換される
+ */
+export const REVIEW_CONTEXT_INSTRUCTION = `
+# PR Review Context
+Here is the diff of the Pull Request you are reviewing:
+
+\`\`\`diff
+\${diff}
+\`\`\`
+
+Focus on this diff to provide your review. This is ephemeral context for this turn only.
+`.trim();
+
+/**
+ * Generates the prompt for PR Review
+ */
+export function generatePRReviewPrompt(
+  repo: string,
+  prNumber: number,
+  prTitle: string,
+  prAuthor: string,
+  prDetails: { additions: number; deletions: number; changedFiles: number },
+  trigger?: { user: string; body: string; html_url: string },
+): string {
+  let prompt = `
+GitHub PRレビュー依頼が来たよ！
+
+## PR情報
+- リポジトリ: ${repo}
+- PR番号: #${prNumber}
+- タイトル: ${prTitle}
+- 作成者: ${prAuthor}
+- 追加行: ${prDetails.additions}
+- 削除行: ${prDetails.deletions}
+- 変更ファイル数: ${prDetails.changedFiles}
+`;
+
+  if (trigger) {
+    prompt += `
+## 💬 ユーザーからのコメント (User Comment)
+**${trigger.user}** さんがコメントしました:
+> ${trigger.body}
+
+(リンク: ${trigger.html_url})
+
+**指示:**
+このコメントは、あなたの前回のレビューに対するフィードバックや質問、または修正の報告かもしれません。
+**このコメントの内容を踏まえて**、必要であれば返信するか、コードを再確認してレビューを行ってください。
+`;
+  } else {
+    prompt += `
+**指示:**
+提供されたPRのDiff（System Contextにあります）を確認し、コードレビューを行ってください。
+問題点や改善提案があればコメントを作成してください。
+`;
+  }
+
+  prompt += `
+# 重要: 出力フォーマット
+必ず以下の **JSONフォーマット** で出力して！マークダウンのコードブロックで囲むこと。
+
+\`\`\`json
+{
+  "status": "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
+  "comment": "レビューコメントの内容（Markdown形式）"
+}
+\`\`\`
+
+- **APPROVE**: 問題がなく、すぐにマージできる場合（LGTM）
+- **REQUEST_CHANGES**: 修正が必要な問題（バグ、セキュリティリスク、設計ミスなど）がある場合
+- **COMMENT**: 質問や提案のみで、マージをブロックする必要がない場合
+`;
+
+  return prompt;
+}
+
+/**
  * Soul Unison Prompts (Thinking Styles)
  * 拡張子に応じて動的に適用される「思考の癖」定義
  */

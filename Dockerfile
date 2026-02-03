@@ -7,6 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
+# 'speaker' requires python, make, g++, and alsa headers
+RUN apt-get update && apt-get install -y python3 make g++ libasound2-dev
+
 RUN npm ci
 
 # Copy source
@@ -24,6 +27,8 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/*.json ./
+
 
 # Set environment
 ENV NODE_ENV=production
