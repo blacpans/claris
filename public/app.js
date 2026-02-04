@@ -8,6 +8,7 @@ let audioContext;
 let processor;
 let inputSource;
 let isConnected = false;
+let shouldReconnect = false; // Flag for auto-reconnection
 
 // Audio Queue & State
 let nextStartTime = 0;
@@ -28,8 +29,10 @@ function updateCaption(text) {
 
 micBtn.addEventListener('click', async () => {
   if (!isConnected) {
+    shouldReconnect = true;
     await startConnection();
   } else {
+    shouldReconnect = false;
     stopConnection();
   }
 });
@@ -91,21 +94,39 @@ async function startConnection() {
     ws.onclose = () => {
       log('WebSocket Closed');
       stopConnection();
+
+      if (shouldReconnect) {
+        log('🔄 Reconnecting in 3s...');
+        statusEl.textContent = 'Reconnecting...';
+        micBtn.classList.add('connecting');
+        setTimeout(() => {
+          if (shouldReconnect) startConnection();
+        }, 3000);
+      }
     };
 
     ws.onerror = (error) => {
       log('WebSocket Error');
       console.error(error);
-      stopConnection();
+      // onerror usually leads to onclose, so we let onclose handle reconnect
     };
   } catch (err) {
     log(`Error: ${err.message}`);
     stopConnection();
+    // Immediate retry on start failure? Maybe better to let user retry or same logic.
+    if (shouldReconnect) {
+      setTimeout(() => {
+        if (shouldReconnect) startConnection();
+      }, 3000);
+    }
   }
 }
 
 function stopConnection() {
-  if (ws) ws.close();
+  if (ws) {
+    ws.onclose = null; // Prevent loop if manually stopping inside this function (though we handle it via flags mostly)
+    ws.close();
+  }
   if (processor) processor.disconnect();
   if (inputSource) inputSource.disconnect();
   if (audioContext) audioContext.close();
