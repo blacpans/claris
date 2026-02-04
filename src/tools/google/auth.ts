@@ -1,5 +1,5 @@
 import { type Auth, google } from 'googleapis';
-import { type SavedCredentials, getCredentialStore } from './store.js';
+import { getCredentialStore, type SavedCredentials } from './store.js';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/gmail.readonly'];
 

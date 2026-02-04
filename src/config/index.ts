@@ -43,7 +43,7 @@ export async function loadConfig(): Promise<ClarisConfig> {
       ...DEFAULT_CONFIG,
       ...parsed,
     };
-  } catch (error) {
+  } catch (_error) {
     console.warn('Could not load claris.config.json, using defaults.');
     return DEFAULT_CONFIG;
   }

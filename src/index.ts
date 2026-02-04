@@ -3,14 +3,17 @@
  * Entry point for the application
  */
 import './config/env.js';
+
+import type { Server } from 'node:http';
 import { serve } from '@hono/node-server';
 import { app } from './runtime/server.js';
+import { setupWebSocket } from './runtime/websocket.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 
 console.log('🌸 Claris is starting up...');
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port: PORT,
@@ -20,3 +23,5 @@ serve(
     console.log(`✨ Claris is listening on http://${info.address}:${info.port}`);
   },
 );
+
+setupWebSocket(server as unknown as Server);

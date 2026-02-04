@@ -3,7 +3,6 @@
 import '../config/env.js';
 import { Command } from 'commander';
 import { live } from './commands/live.js';
-import { CLI_MESSAGES } from './messages.js';
 import { registerStatus } from './status.js';
 import { registerTalk } from './talk.js';
 

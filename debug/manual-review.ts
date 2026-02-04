@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
+
 dotenv.config({ path: '.env.local' });
+
 import { generatePRReviewPrompt } from '../src/agents/prompts.js';
 import { adkRunner } from '../src/runtime/runner.js';
 import { fetchDiff, getPRDetails } from '../src/tools/git/github.js';

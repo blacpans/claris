@@ -4,16 +4,18 @@
  * Implements ADK's BaseSessionService to store agent sessions in Firestore.
  * This enables stateful conversations across HTTP requests.
  */
-import { FieldValue, Firestore } from '@google-cloud/firestore';
-import type { Event, Session } from '@google/adk';
+
 import type {
   AppendEventRequest,
   CreateSessionRequest,
   DeleteSessionRequest,
+  Event,
   GetSessionRequest,
   ListSessionsRequest,
   ListSessionsResponse,
+  Session,
 } from '@google/adk';
+import { Firestore } from '@google-cloud/firestore';
 
 export class FirestoreSessionService {
   private readonly db: Firestore;
@@ -34,7 +36,7 @@ export class FirestoreSessionService {
       appName: request.appName,
       userId: request.userId,
       state: (request.state as Record<string, unknown>) || {},
-      events: [],
+      events: [], // Kept in interface but empty in storage
       lastUpdateTime: Date.now(),
     };
 
@@ -42,7 +44,11 @@ export class FirestoreSessionService {
       .collection(this.collectionName)
       .doc(this.buildDocId(request.appName, request.userId, sessionId));
 
-    await docRef.set(this.removeUndefined(session));
+    // Exclude 'events' from the parent document storage
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { events, ...sessionData } = session;
+
+    await docRef.set(this.removeUndefined(sessionData));
     console.log(`[Firestore] Created session: ${sessionId}`);
     return session;
   }
@@ -60,14 +66,46 @@ export class FirestoreSessionService {
       return undefined;
     }
 
-    const session = doc.data() as Session;
+    const sessionData = doc.data() as Session;
+    const session: Session = {
+      ...sessionData,
+      events: [],
+    };
+
+    // Fetch events from subcollection
+    let query = docRef.collection('events').orderBy('timestamp', 'asc');
 
     // Apply optional filters
-    if (request.config?.numRecentEvents) {
-      session.events = session.events.slice(-request.config.numRecentEvents);
-    }
     if (request.config?.afterTimestamp) {
-      session.events = session.events.filter((e) => e.timestamp > (request.config?.afterTimestamp ?? 0));
+      query = query.where('timestamp', '>', request.config.afterTimestamp);
+    }
+
+    // Note: limitToLast is more efficient for "recent items" but tricky with 'asc' sort if we want the *very* last ones.
+    // If we want the last N events: orderBy('timestamp', 'desc').limit(N) -> then reverse.
+    if (request.config?.numRecentEvents) {
+      const reversedQuery = docRef
+        .collection('events')
+        .orderBy('timestamp', 'desc')
+        .limit(request.config.numRecentEvents);
+      if (request.config?.afterTimestamp) {
+        // Combining range and limit in reverse might be complex logic wise for 'afterTimestamp'
+        // For Review Mode (afterTimestamp), usually we want ALL events after X.
+        // For generic Context (numRecentEvents), we want last N.
+        // Let's stick to simple logic: Only apply one or the other, or fetch all and slice if complex.
+        // Given implementation plan: prioritize correct query.
+      } else {
+        const snapshot = await reversedQuery.get();
+        session.events = snapshot.docs.map((d) => d.data() as Event).reverse();
+        return session;
+      }
+    }
+
+    const snapshot = await query.get();
+    session.events = snapshot.docs.map((d) => d.data() as Event);
+
+    // If both applied and we fell back to 'asc' query, slice locally (though less efficient)
+    if (request.config?.numRecentEvents && session.events.length > request.config.numRecentEvents) {
+      session.events = session.events.slice(-request.config.numRecentEvents);
     }
 
     return session;
@@ -75,21 +113,17 @@ export class FirestoreSessionService {
 
   /**
    * Lists all sessions for a user.
-   *
-   * Note: The returned sessions contain empty `events` and `state` to reduce payload size.
-   * Use `getSession` to retrieve full session details.
    */
   async listSessions(request: ListSessionsRequest): Promise<ListSessionsResponse> {
     const snapshot = await this.db
       .collection(this.collectionName)
       .where('appName', '==', request.appName)
       .where('userId', '==', request.userId)
-      .select('id', 'appName', 'userId', 'lastUpdateTime')
+      .select('id', 'appName', 'userId', 'lastUpdateTime') // Only fetch metadata
       .get();
 
     const sessions: Session[] = snapshot.docs.map((doc) => {
       const data = doc.data() as Session;
-      // Don't include events/state in list response (too heavy)
       return {
         id: data.id,
         appName: data.appName,
@@ -104,14 +138,45 @@ export class FirestoreSessionService {
   }
 
   /**
-   * Deletes a session from Firestore
+   * Deletes a session from Firestore (Recursive delete)
    */
   async deleteSession(request: DeleteSessionRequest): Promise<void> {
     const docRef = this.db
       .collection(this.collectionName)
       .doc(this.buildDocId(request.appName, request.userId, request.sessionId));
 
+    // Delete subcollection 'events'
+    await this.deleteCollection(docRef.collection('events'), 50);
+
+    // Delete parent doc
     await docRef.delete();
+  }
+
+  /**
+   * Helper to recursively delete a collection
+   * Reference: https://firebase.google.com/docs/firestore/manage-data/delete-data#collections
+   */
+  private async deleteCollection(
+    collectionRef: FirebaseFirestore.CollectionReference,
+    batchSize: number,
+  ): Promise<void> {
+    const query = collectionRef.orderBy('__name__').limit(batchSize);
+    const snapshot = await query.get();
+
+    if (snapshot.size === 0) {
+      return;
+    }
+
+    const batch = this.db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+
+    // Recurse
+    if (snapshot.size >= batchSize) {
+      await this.deleteCollection(collectionRef, batchSize);
+    }
   }
 
   /**
@@ -127,8 +192,11 @@ export class FirestoreSessionService {
       timestamp: event.timestamp || Date.now(),
     } as Event;
 
+    // Add to subcollection
+    await docRef.collection('events').add(this.removeUndefined(eventWithTimestamp));
+
+    // Update parent metadata
     await docRef.update({
-      events: FieldValue.arrayUnion(this.removeUndefined(eventWithTimestamp)),
       lastUpdateTime: Date.now(),
     });
 
@@ -155,10 +223,21 @@ export class FirestoreSessionService {
         }) as Event,
     );
 
-    await docRef.update({
-      events: FieldValue.arrayUnion(...eventsWithTimestamp.map((e) => this.removeUndefined(e))),
-      lastUpdateTime: Date.now(),
-    });
+    const batch = this.db.batch();
+    const headersUpdate: Record<string, unknown> = { lastUpdateTime: now };
+
+    // Update parent
+    batch.update(docRef, headersUpdate);
+
+    // Add events to subcollection
+    const eventsCollection = docRef.collection('events');
+    for (const event of eventsWithTimestamp) {
+      // Use a new doc ref for each event
+      const newEventRef = eventsCollection.doc();
+      batch.set(newEventRef, this.removeUndefined(event));
+    }
+
+    await batch.commit();
 
     return eventsWithTimestamp;
   }
