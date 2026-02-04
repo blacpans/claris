@@ -1,0 +1,21 @@
+{
+  "name": "Claris - AI Assistant",
+  "short_name": "Claris",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#ff69b4",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/google-gemini/gemini-api-cookbook/main/images/gemini-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/google-gemini/gemini-api-cookbook/main/images/gemini-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

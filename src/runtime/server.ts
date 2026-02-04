@@ -1,16 +1,20 @@
-import { MESSAGES } from '@/constants/messages.js';
-import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
+import { serveStatic } from '@hono/node-server/serve-static';
 /**
  * Hono Server - Minimal runtime for Claris
  */
 import { Hono } from 'hono';
+import { MESSAGES } from '@/constants/messages.js';
+import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
 
 export const app = new Hono();
 
+// Static file serving (PWA)
+app.use('/*', serveStatic({ root: './public' }));
+
 // Health check endpoint
-app.get('/', (c) => {
+app.get('/health', (c) => {
   return c.json({
     name: 'Claris',
     status: 'online',

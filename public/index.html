@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Claris Live 🌸</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a1a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    h1 {
+      font-weight: 300;
+      letter-spacing: 2px;
+      margin-bottom: 2rem;
+      background: linear-gradient(45deg, #ff69b4, #da70d6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #visualizer {
+      width: 300px;
+      height: 100px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    #mic-btn {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: none;
+      background: #333;
+      color: #fff;
+      font-size: 3rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    #mic-btn.active {
+      background: #ff69b4;
+      box-shadow: 0 0 30px rgba(255, 105, 180, 0.6);
+      transform: scale(1.1);
+    }
+
+    #mic-btn.connecting {
+      animation: pulse 1.5s infinite;
+      background: #da70d6;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    #status {
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: #888;
+    }
+
+    #captions {
+      margin-top: 2rem;
+      padding: 1rem;
+      min-height: 3rem;
+      text-align: center;
+      font-size: 1.1rem;
+      line-height: 1.5;
+      max-width: 80%;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 8px;
+      backdrop-filter: blur(4px);
+      transition: opacity 0.3s ease;
+    }
+    
+    #captions:empty {
+      opacity: 0;
+    }
+
+    /* PWA Install Prompt (Optional styling) */
+    .logs {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      height: 80px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 10px;
+      color: #444;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Claris Live 🌸</h1>
+  
+  <div id="visualizer">
+    <!-- Simple CSS visualizer placeholder -->
+    <div style="display:flex; gap:4px; align-items:flex-end; height:30px;">
+      <div class="bar" style="width:4px; height:10px; background:#555; border-radius:2px;"></div>
+      <div class="bar" style="width:4px; height:20px; background:#555; border-radius:2px;"></div>
+      <div class="bar" style="width:4px; height:15px; background:#555; border-radius:2px;"></div>
+      <div class="bar" style="width:4px; height:25px; background:#555; border-radius:2px;"></div>
+      <div class="bar" style="width:4px; height:12px; background:#555; border-radius:2px;"></div>
+    </div>
+  </div>
+
+  <button id="mic-btn">🎙️</button>
+  
+  <div id="status">Tap to Connect</div>
+
+  <div id="captions"></div>
+
+  <div class="logs" id="logs"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

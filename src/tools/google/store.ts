@@ -44,7 +44,7 @@ export class FileCredentialStore implements CredentialStore {
     try {
       const content = await fs.readFile(this.filePath, 'utf-8');
       return JSON.parse(content) as SavedCredentials;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }

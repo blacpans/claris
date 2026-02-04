@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events';
-import { Readable } from 'node:stream';
 import Speaker from 'speaker';
 
 /**
@@ -57,7 +56,6 @@ export class AudioPlayer extends EventEmitter {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
-      // @ts-ignore
       this.speaker = new Speaker({
         channels: 1,
         bitDepth: 16,

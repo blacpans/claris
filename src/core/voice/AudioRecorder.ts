@@ -1,5 +1,5 @@
-import type { Readable } from 'node:stream';
 import { endianness } from 'node:os';
+import type { Readable } from 'node:stream';
 import record from 'node-record-lpcm16';
 
 interface AudioRecordProcess {
@@ -84,7 +84,7 @@ export class AudioRecorder {
           if (IS_LITTLE_ENDIAN && chunk.byteOffset % 2 === 0) {
             const int16Data = new Int16Array(chunk.buffer, chunk.byteOffset, len);
             for (let i = 0; i < int16Data.length; i++) {
-              const int = int16Data[i]!;
+              const int = int16Data[i] ?? 0;
               sumSquares += int * int;
             }
           } else {

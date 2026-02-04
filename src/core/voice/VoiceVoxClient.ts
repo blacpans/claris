@@ -47,7 +47,7 @@ export class VoiceVoxClient {
     try {
       await axios.get(`${this.baseUrl}/version`);
       return true;
-    } catch (err) {
+    } catch (_err) {
       return false;
     }
   }

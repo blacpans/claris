@@ -1,7 +1,7 @@
-import { listUpcomingEventsFn } from '@/tools/google/calendar.js';
-import { listUnreadEmailsFn } from '@/tools/google/gmail.js';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import { listUpcomingEventsFn } from '@/tools/google/calendar.js';
+import { listUnreadEmailsFn } from '@/tools/google/gmail.js';
 
 export function registerStatus(program: Command) {
   program

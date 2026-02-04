@@ -137,7 +137,7 @@ export class LiveSession {
     return Buffer.concat([header, pcmData]);
   }
 
-  async startTurnBasedLoop(model: string, config: unknown) {
+  async startTurnBasedLoop(_model: string, config: unknown) {
     console.log('🔄 Starting Turn-Based Loop for VoiceVox (Cloud Context)...');
     console.log('🎤 Listening... (Speak now!)');
 
@@ -266,7 +266,7 @@ export class LiveSession {
               data: chunk.toString('base64'),
             },
           });
-        } catch (e) {
+        } catch (_e) {
           // ignore sending error (sometimes happens during close)
         }
       }

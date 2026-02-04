@@ -15,7 +15,12 @@
     "format": "biome format --write .",
     "prepare": "husky"
   },
-  "keywords": ["adk", "agent", "netnavi", "gemini"],
+  "keywords": [
+    "adk",
+    "agent",
+    "netnavi",
+    "gemini"
+  ],
   "author": "blacpans",
   "license": "MIT",
   "dependencies": {
@@ -38,7 +43,7 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.3.14",
     "@types/node": "^22.13.1",
     "@types/ws": "^8.18.1",
     "husky": "^9.1.7",
@@ -51,6 +56,9 @@
     "node": ">=20.0.0"
   },
   "lint-staged": {
-    "*": ["biome check --write --no-errors-on-unmatched", "biome format --write --no-errors-on-unmatched"]
+    "*": [
+      "biome check --write --no-errors-on-unmatched",
+      "biome format --write --no-errors-on-unmatched"
+    ]
   }
 }
