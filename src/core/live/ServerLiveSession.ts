@@ -12,8 +12,11 @@ export interface ServerLiveSessionEvents {
   text: (text: string) => void;
   close: () => void;
   interrupted: () => void;
+  turnComplete: () => void;
   error: (error: Error) => void;
 }
+
+// ... (existing code) ...
 
 interface LiveServerMessage {
   serverContent?: {
@@ -23,6 +26,7 @@ interface LiveServerMessage {
     interrupted?: boolean;
     turnComplete?: boolean;
   };
+  turnComplete?: boolean;
 }
 
 interface LiveSessionClient {
@@ -232,6 +236,11 @@ ${memory}`,
       }
     }
 
+    if (message.serverContent?.turnComplete) {
+      console.log('✅ Turn Complete');
+      this.emit('turnComplete');
+    }
+
     if (message.serverContent?.interrupted) {
       console.log('🛑 Interrupted');
       this.emit('interrupted');
@@ -278,15 +287,26 @@ ${memory}`,
       let accumulated = '';
       let timer: NodeJS.Timeout;
 
-      const handler = (text: string) => {
+      const onText = (text: string) => {
         accumulated += text;
       };
 
-      this.on('text', handler);
+      const onTurnComplete = () => {
+        cleanup();
+        resolve(accumulated.trim());
+      };
+
+      const cleanup = () => {
+        this.off('text', onText);
+        this.off('turnComplete', onTurnComplete);
+        clearTimeout(timer);
+      };
+
+      this.on('text', onText);
+      this.on('turnComplete', onTurnComplete);
 
       timer = setTimeout(() => {
-        this.off('text', handler);
-        clearTimeout(timer);
+        cleanup();
         resolve(accumulated.trim());
       }, timeoutMs);
     });
