@@ -28,29 +28,38 @@ export function setupWebSocket(server: Server) {
       }
     });
 
-    // Handle outbound audio from Gemini
-    liveSession.on('audio', (pcmData: Buffer) => {
+    // Define specific event handlers for cleanup
+    const onAudio = (pcmData: Buffer) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(pcmData);
       }
-    });
+    };
 
-    liveSession.on('interrupted', () => {
+    const onInterrupted = () => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'interrupted' }));
       }
-    });
+    };
 
-    liveSession.on('text', (text: string) => {
+    const onText = (text: string) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'text', text }));
       }
-    });
+    };
+
+    // Handle outbound audio from Gemini
+    liveSession.on('audio', onAudio);
+    liveSession.on('interrupted', onInterrupted);
+    liveSession.on('text', onText);
 
     // Handle errors and close
-    ws.on('close', () => {
+    ws.on('close', async () => {
       console.log('📱 Client disconnected');
-      liveSession.stop();
+      // Cleanup listeners to prevent crash on late events
+      liveSession.off('audio', onAudio);
+      liveSession.off('interrupted', onInterrupted);
+      liveSession.off('text', onText);
+      await liveSession.disconnect();
     });
 
     ws.on('error', (err) => {

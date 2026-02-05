@@ -67,21 +67,40 @@ npm run dev
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID |
-| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (e.g., `us-central1` or `global`) |
-| `GEMINI_MODEL` | Gemini Model Name (e.g., `gemini-1.5-pro`) |
-| `FIRESTORE_COLLECTION` | Firestore collection for session storage |
-| `GITHUB_TOKEN` | GitHub Personal Access Token (for PR operations) |
-| `GITHUB_WEBHOOK_SECRET` | Secret for GitHub Webhook verification |
-| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Client Secret |
-| `GOOGLE_REDIRECT_URI` | Google OAuth 2.0 Redirect URI |
-| `AUTH_SECRET` | Secret to protect `/auth/google` and session state |
-| `TZ` | Timezone (e.g., `Asia/Tokyo`) |
-| `PORT` | Server port (default: 8080) |
-| `CLARIS_NAME` | Agent Name (default: Claris) |
+| Variable | Description | Default (if applicable) |
+|----------|-------------|-------------------------|
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID | |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (General) | `us-central1` |
+| `GEMINI_MODEL` | Gemini Model Name (Chat) | `gemini-1.5-pro` |
+| `FIRESTORE_COLLECTION` | Firestore collection for session storage | `claris-sessions` |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (for PR operations) | |
+| `GITHUB_WEBHOOK_SECRET` | Secret for GitHub Webhook verification | |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Client Secret | |
+| `GOOGLE_REDIRECT_URI` | Google OAuth 2.0 Redirect URI | |
+| `AUTH_SECRET` | Secret to protect `/auth/google` and session state | |
+| `TZ` | Timezone | `Asia/Tokyo` |
+| `PORT` | Server port | `8080` |
+| `CLARIS_NAME` | Agent Name | `Claris` |
+| `GEMINI_LIVE_MODEL` | Gemini Model for Live Session (Audio) | `gemini-live-2.5-flash-native-audio` |
+| `GEMINI_LIVE_LOCATION` | Vertex AI Location for Live Session | `us-central1` |
+| `GEMINI_API_VERSION` | Gemini API Version | `v1beta1` |
+| `VOICEVOX_GEMINI_MODEL` | Model for TTS generation via Gemini | `gemini-2.0-flash-exp` |
+| `RELAY_PORT` | Port for Relay Server (Sensory Interface) | `3000` |
+| `SUMMARY_TIMEOUT_MS` | Timeout for summary generation (ms) | `10000` |
+
+## Firestore & Vector Search Setup 🔥
+
+To enable Long-Term Memory, you need to configure a Firestore Vector Search Index.
+
+1.  **Collection**: `claris-memories`
+2.  **Index Type**: Vector Search
+3.  **Fields**:
+    -   `embedding`: Vector (Dimension: 768)
+    -   `userId`: Ascending (for filtering)
+
+> [!NOTE]
+> When you run the application for the first time and attempt to save/search memory, the error log will provide a direct URL to create this index automatically.
 
 ## CLI Tool 💻
 
