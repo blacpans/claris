@@ -203,8 +203,8 @@ export class MemoryService {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    // Handle SDK response: text is a getter method returning String
-    const summary = response.text ? response.text.toString() : '';
+    // Handle SDK response: text is a getter property
+    const summary = response.text || '';
 
     return summary || 'Summary generation failed';
   }

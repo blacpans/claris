@@ -255,7 +255,7 @@ ${memory}`,
       );
 
       // 2. Wait for Summary Response
-      const timeoutMs = process.env.SUMMARY_TIMEOUT_MS ? parseInt(process.env.SUMMARY_TIMEOUT_MS, 10) : 10000;
+      const timeoutMs = process.env.SUMMARY_TIMEOUT_MS ? parseInt(process.env.SUMMARY_TIMEOUT_MS, 10) : 15000;
       const summary = await this.waitForSummary(timeoutMs);
 
       // 3. Save Memory
