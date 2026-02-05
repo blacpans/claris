@@ -48,9 +48,9 @@ export function setupWebSocket(server: Server) {
     });
 
     // Handle errors and close
-    ws.on('close', () => {
+    ws.on('close', async () => {
       console.log('📱 Client disconnected');
-      liveSession.stop();
+      await liveSession.disconnect();
     });
 
     ws.on('error', (err) => {
