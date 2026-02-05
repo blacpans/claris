@@ -24,14 +24,20 @@ export class MemoryService {
   private model = 'gemini-1.5-flash-001'; // For summarization
   private embeddingModel = 'text-embedding-004';
 
-  constructor() {
-    this.db = new Firestore({ ignoreUndefinedProperties: true });
-    this.genAI = new GoogleGenAI({
-      project: process.env.GOOGLE_CLOUD_PROJECT,
-      location: process.env.GEMINI_LIVE_LOCATION || 'us-central1',
-      vertexai: true,
-      apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
-    });
+  // Output dimension for text-embedding-004
+  public readonly EMBEDDING_DIMENSION = 768;
+  private readonly MAX_CHUNK_LENGTH = 15000; // Character limit for a single summary request
+
+  constructor(db?: Firestore, genAI?: GoogleGenAI) {
+    this.db = db || new Firestore({ ignoreUndefinedProperties: true });
+    this.genAI =
+      genAI ||
+      new GoogleGenAI({
+        project: process.env.GOOGLE_CLOUD_PROJECT,
+        location: process.env.GEMINI_LIVE_LOCATION || 'us-central1',
+        vertexai: true,
+        apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
+      });
   }
 
   /**
@@ -123,6 +129,65 @@ export class MemoryService {
   }
 
   private async generateSummary(text: string): Promise<string> {
+    // 1. Chunking if text is too long
+    if (text.length > this.MAX_CHUNK_LENGTH) {
+      console.log(`📜 Text too long (${text.length} chars), splitting into chunks...`);
+      const chunks = this.splitTextIntoChunks(text, this.MAX_CHUNK_LENGTH);
+
+      console.log(`🧩 Processed ${chunks.length} chunks. Summarizing in parallel...`);
+
+      // 2. Parallel Summarization
+      const summaries = await Promise.all(
+        chunks.map(async (chunk, index) => {
+          try {
+            const summary = await this.callLLMSummarization(chunk);
+            return summary;
+          } catch (e) {
+            console.error(`❌ Failed to summarize chunk ${index}:`, e);
+            return ''; // Return empty string on failure to preserve index alignment
+          }
+        }),
+      );
+
+      // 3. Combine Summaries
+      // Filter out empty summaries and join
+      return summaries.filter((s) => s).join('\n\n');
+    }
+
+    // Direct summarization for short text
+    return this.callLLMSummarization(text);
+  }
+
+  private splitTextIntoChunks(text: string, maxLength: number): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    // Simple line-based splitting to avoid cutting sentences ideally
+    // But for now, simple length based splitting with newline preference
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+      if ((currentChunk + line).length > maxLength) {
+        if (currentChunk) chunks.push(currentChunk);
+        currentChunk = line + '\n';
+      } else {
+        currentChunk += line + '\n';
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk);
+
+    // Fallback: if a single line is massive (unlikely in chat logs but possible), split strictly
+    if (chunks.length === 0 && text.length > 0) {
+      // very rough split if lines failed
+      for (let i = 0; i < text.length; i += maxLength) {
+        chunks.push(text.slice(i, i + maxLength));
+      }
+    }
+
+    return chunks;
+  }
+
+  private async callLLMSummarization(text: string): Promise<string> {
     const prompt = `
     Analyze the following conversation log and summarize the key information related to the user (User).
     Focus on specific facts, preferences, names, and important events mentioned by the user.
