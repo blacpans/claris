@@ -155,10 +155,7 @@ ${memory}`,
       } as ListSessionsRequest);
 
       if (!list.sessions || list.sessions.length === 0) {
-        if (userId !== 'anonymous') {
-          const anonMemory = await this.loadMemory('anonymous');
-          return anonMemory;
-        }
+        // user 'anonymous' fallback removed for privacy
         return `${longTermMemory}No previous conversation history.`.trim();
       }
 
@@ -262,7 +259,7 @@ ${memory}`,
       const summary = await this.waitForSummary(timeoutMs);
 
       // 3. Save Memory
-      if (summary && this.currentSessionId) {
+      if (summary && this.currentSessionId && this.currentUserId !== 'anonymous') {
         console.log(`💾 Saving Summary: ${summary.slice(0, 50)}...`);
         await this.memoryService.saveMemory(this.currentUserId, this.currentSessionId, summary);
       } else {
