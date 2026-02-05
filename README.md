@@ -87,6 +87,7 @@ npm run dev
 | `GEMINI_API_VERSION` | Gemini API Version | `v1beta1` |
 | `VOICEVOX_GEMINI_MODEL` | Model for TTS generation via Gemini | `gemini-2.0-flash-exp` |
 | `RELAY_PORT` | Port for Relay Server (Sensory Interface) | `3000` |
+| `SUMMARY_TIMEOUT_MS` | Timeout for summary generation (ms) | `10000` |
 
 ## Firestore & Vector Search Setup 🔥
 
