@@ -3,9 +3,9 @@ export const CLI_MESSAGES = {
   COMMANDS: {
     CHAT: {
       NAME: 'chat',
-      DESCRIPTION: 'クラリスと会話する',
-      ARG_MESSAGE: '送信するメッセージ',
-      OPT_URL: 'APIのURL',
+      DESCRIPTION: 'Chat with Claris',
+      ARG_MESSAGE: 'Message to send',
+      OPT_URL: 'API URL',
     },
   },
   ERRORS: {
