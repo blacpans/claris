@@ -3,7 +3,7 @@ export const CLI_MESSAGES = {
   COMMANDS: {
     CHAT: {
       NAME: 'chat',
-      DESCRIPTION: 'クラリスとチャットする',
+      DESCRIPTION: 'クラリスと会話する',
       ARG_MESSAGE: '送信するメッセージ',
       OPT_URL: 'APIのURL',
     },
