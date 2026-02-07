@@ -22,14 +22,14 @@
 ネットナビへの進化に必要な次の一手ダヨ！💎
 
 ### 📱 Interface Expansion
-- [ ] **Infrastructure Optimization**:
-    - [ ] **Diff Fetch Optimization**: Chat vs Review mode to save tokens (Issue #15)
+- [x] **Infrastructure Optimization**:
+    - [x] **Diff Fetch Optimization**: Chat vs Review mode to save tokens (Issue #15)
 - [ ] **Mobile App (Flutter/PWA)**:
     - WebSocketでCloud Runに接続し、スマホから音声対話。
     - CLIのロジックを流用。
 
 ### 📅 Agent Capabilities (Google Integration)
-- [ ] **Calendar Integration**: "明日の予定教えて" に答えられるようにする。
+- [x] **Calendar Integration**: "明日の予定教えて" に答えられるようにする。
 - [ ] **Gmail Integration**: 未読メールのチェックと要約。
 
 ### 👀 Vision Capabilities
@@ -38,5 +38,6 @@
     - `claris live` モードでの画像入力対応。
 
 ### 🔔 Active Notification
-- [ ] **Push Notification (FCM)**:
-    - AIから "PRのレビュー終わったよ！" とスマホに通知を送る。
+- [x] **Global Command**: `npx` なしで `claris` コマンドを使えるようにする。
+- [x] **Server Auto-start**: `claris chat` 時にサーバーが落ちていたら自動起動する。
+- [x] **Claris Start/Stop**: `claris start`, `claris stop` コマンドの実装。

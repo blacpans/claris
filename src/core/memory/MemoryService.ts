@@ -169,9 +169,9 @@ export class MemoryService {
     for (const line of lines) {
       if ((currentChunk + line).length > maxLength) {
         if (currentChunk) chunks.push(currentChunk);
-        currentChunk = line + '\n';
+        currentChunk = `${line}\n`;
       } else {
-        currentChunk += line + '\n';
+        currentChunk += `${line}\n`;
       }
     }
     if (currentChunk) chunks.push(currentChunk);

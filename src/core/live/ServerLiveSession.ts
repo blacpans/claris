@@ -16,8 +16,6 @@ export interface ServerLiveSessionEvents {
   error: (error: Error) => void;
 }
 
-// ... (existing code) ...
-
 interface LiveServerMessage {
   serverContent?: {
     modelTurn?: {
@@ -145,8 +143,7 @@ ${memory}`,
           3,
         );
         if (results.length > 0) {
-          longTermMemory =
-            '## Long-term Memory (Relevant Facts)\n' + results.map((r) => `- ${r.memory.summary}`).join('\n') + '\n\n';
+          longTermMemory = `## Long-term Memory (Relevant Facts)\n${results.map((r) => `- ${r.memory.summary}`).join('\n')}\n\n`;
         }
       } catch (err) {
         console.error('Failed to load long-term memory:', err);
