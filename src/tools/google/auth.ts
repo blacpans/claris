@@ -1,7 +1,19 @@
 import { type Auth, google } from 'googleapis';
 import { getCredentialStore, type SavedCredentials } from './store.js';
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/gmail.readonly'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/tasks', // Tasks
+  'https://www.googleapis.com/auth/spreadsheets', // Sheets
+  'https://www.googleapis.com/auth/drive.metadata.readonly', // Drive (Search)
+  'https://www.googleapis.com/auth/drive.file', // Drive (File access)
+  'https://www.googleapis.com/auth/youtube.readonly', // YouTube (Search/Playlists)
+  'https://www.googleapis.com/auth/youtube.force-ssl', // YouTube (Manage)
+  'https://www.googleapis.com/auth/photoslibrary.readonly', // Photos
+  'https://www.googleapis.com/auth/contacts.readonly', // People (Contacts)
+  'https://www.googleapis.com/auth/user.birthday.read', // People (Birthdays)
+];
 
 // メモリ上のキャッシュされたクライアント
 let cachedClient: Auth.JWT | Auth.OAuth2Client | null = null;

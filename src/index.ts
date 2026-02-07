@@ -6,12 +6,16 @@ import './config/env.js';
 
 import type { Server } from 'node:http';
 import { serve } from '@hono/node-server';
-import { app } from './runtime/server.js';
-import { setupWebSocket } from './runtime/websocket.js';
+
+import { app } from '@/runtime/server.js';
+import { setupWebSocket } from '@/runtime/websocket.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 
 console.log('🌸 Claris is starting up...');
+
+// Agent instantiation removed as it was incorrect here.
+// Tools should be registered where the agent is initialized.
 
 const server = serve(
   {
