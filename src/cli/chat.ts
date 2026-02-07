@@ -48,7 +48,14 @@ export const chat = new Command(CLI_MESSAGES.COMMANDS.CHAT.NAME)
         console.log(chalk.yellow('⚠️ Server seems to be down. Attempting to start...'));
 
         // Use shared utility to start server
-        await startServer({ detached: true, stdio: 'ignore' });
+        try {
+          const urlObj = new URL(apiUrl);
+          const port = urlObj.port ? Number(urlObj.port) : undefined;
+          await startServer({ detached: true, stdio: 'ignore', port });
+        } catch (_e) {
+          // Fallback if URL parsing fails (though unlikely if fetch worked up to connection error)
+          await startServer({ detached: true, stdio: 'ignore' });
+        }
 
         console.log(chalk.cyan('⏳ Waiting for server to initialize...'));
         const isServerReady = await waitForServer(apiUrl);
