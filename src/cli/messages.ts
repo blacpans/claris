@@ -1,11 +1,11 @@
 export const CLI_MESSAGES = {
   DESCRIPTION: 'Claris CLI Client',
   COMMANDS: {
-    TALK: {
-      NAME: 'talk',
-      DESCRIPTION: 'クラリスと会話する',
-      ARG_MESSAGE: '送信するメッセージ',
-      OPT_URL: 'APIのURL',
+    CHAT: {
+      NAME: 'chat',
+      DESCRIPTION: 'Chat with Claris',
+      ARG_MESSAGE: 'Message to send',
+      OPT_URL: 'API URL',
     },
   },
   ERRORS: {
