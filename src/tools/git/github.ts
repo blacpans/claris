@@ -54,7 +54,8 @@ export async function fetchDiff(input: FetchDiffInput): Promise<string> {
   const chunks = fullDiff.split('diff --git ');
   const filteredHelper = chunks.filter((chunk) => {
     if (!chunk.trim()) return true; // Keep empty prelude if any
-    const firstLine = chunk.split('\n')[0] || '';
+    const newLineIndex = chunk.indexOf('\n');
+    const firstLine = newLineIndex === -1 ? chunk : chunk.substring(0, newLineIndex);
     return !DEFAULT_IGNORED_FILES.some((file) => firstLine.includes(file));
   });
 
