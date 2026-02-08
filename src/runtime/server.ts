@@ -26,10 +26,12 @@ app.get('/health', (c) => {
 app.get('/auth/google', async (c) => {
   try {
     const secret = c.req.query('secret');
+    const profile = c.req.query('profile'); // プロファイル名を取得
+
     if (secret !== process.env.AUTH_SECRET) {
       return c.json({ error: MESSAGES.AUTH.UNAUTHORIZED_SECRET }, 401);
     }
-    const authUrl = await getAuthUrl(secret); // secretをstateとして渡す
+    const authUrl = await getAuthUrl(secret, profile); // secretをstateとして、profileと共に渡す
     return c.redirect(authUrl);
   } catch (error) {
     console.error('Auth URL generation error:', error);
@@ -48,11 +50,27 @@ app.get('/oauth2callback', async (c) => {
     }
 
     // CSRF対策: state (AUTH_SECRET) の検証
-    if (state !== process.env.AUTH_SECRET) {
+    // state は base64 エンコードされた JSON 文字列になっている可能性がある
+    let isValidState = false;
+    if (state === process.env.AUTH_SECRET) {
+      isValidState = true; // 旧方式 (or profileなし)
+    } else if (state) {
+      try {
+        const decodedState = Buffer.from(state, 'base64').toString('utf-8');
+        const stateObj = JSON.parse(decodedState);
+        if (stateObj.originalState === process.env.AUTH_SECRET) {
+          isValidState = true;
+        }
+      } catch {
+        // Parse error or invalid format -> valid = false
+      }
+    }
+
+    if (!isValidState) {
       return c.json({ error: MESSAGES.AUTH.INVALID_STATE }, 401);
     }
 
-    await handleAuthCallback(code);
+    await handleAuthCallback(code, state);
     return c.html(
       MESSAGES.AUTH.SUCCESS_HTML(
         MESSAGES.AUTH.SUCCESS_TITLE,

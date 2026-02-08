@@ -35,3 +35,4 @@ credentials.json
 token.json
 *.pcm
 .env
+token_youtube.json

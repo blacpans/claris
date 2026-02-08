@@ -9,9 +9,9 @@ export const start = new Command('start')
   .action(async (options) => {
     console.log(chalk.cyan('🚀 Starting Claris server...'));
 
-    const detached = options.detached || false;
-    const port = options.port ? Number(options.port) : undefined;
+    const detached = options.detached;
     const stdio = detached ? 'ignore' : 'inherit';
+    const port = options.port ? Number(options.port) : undefined;
 
     // stdio type mismatch workaround if needed, but startServer accepts any[] | string
     const subprocess = await startServer({ detached, stdio, port });

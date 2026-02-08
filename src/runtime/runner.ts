@@ -1,16 +1,86 @@
 import { type Event, InMemoryRunner } from '@google/adk';
 import { createClarisAgent } from '@/agents/claris.js';
+import { PubSubListener } from '@/core/async/pubsub.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
+import { getGmailClient } from '@/tools/google/auth.js';
 
 const APP_NAME = 'claris';
 
 export class AdkRunnerService {
   private readonly sessionService: FirestoreSessionService;
+  private pubsubListener: PubSubListener | null = null;
 
   constructor() {
     this.sessionService = new FirestoreSessionService({
       collectionName: process.env.FIRESTORE_COLLECTION || 'claris-sessions',
     });
+    this.initializePubSub();
+  }
+
+  private async initializePubSub() {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+    const subscriptionName = process.env.PUBSUB_SUBSCRIPTION;
+
+    if (projectId && subscriptionName) {
+      this.pubsubListener = new PubSubListener(projectId, subscriptionName);
+      this.pubsubListener.listen(this.handlePubSubMessage.bind(this));
+    } else {
+      console.log('ℹ️ Pub/Sub configuration missing. Skipping listener initialization.');
+    }
+  }
+
+  private async handlePubSubMessage(message: {
+    id: string;
+    data?: string | Buffer;
+    ack: () => void;
+    nack: () => void;
+  }) {
+    console.log(`📨 Received Pub/Sub message: ${message.id}`);
+    const data = message.data ? Buffer.from(message.data as string, 'base64').toString() : '{}';
+    const parsedData = JSON.parse(data);
+
+    // Gmail Notification Handling
+    if (parsedData.emailAddress && parsedData.historyId) {
+      console.log(`📧 Gmail Notification for ${parsedData.emailAddress}, History ID: ${parsedData.historyId}`);
+      try {
+        const gmail = await getGmailClient();
+        const history = await gmail.users.history.list({
+          userId: 'me',
+          startHistoryId: parsedData.historyId,
+          historyTypes: ['messageAdded'],
+        });
+
+        const newMessages = history.data.history?.flatMap((h) => h.messagesAdded || []) || [];
+
+        if (newMessages.length > 0) {
+          const details = await Promise.all(
+            newMessages.map(async (msg) => {
+              if (!msg.message?.id) return null;
+              const m = await gmail.users.messages.get({
+                userId: 'me',
+                id: msg.message.id,
+                format: 'metadata',
+                metadataHeaders: ['Subject', 'From'],
+              });
+              const headers = m.data.payload?.headers;
+              const subject = headers?.find((h) => h.name === 'Subject')?.value || '(No Subject)';
+              const from = headers?.find((h) => h.name === 'From')?.value || '(Unknown)';
+              return `  - From: ${from}\n    Subject: ${subject}`;
+            }),
+          );
+
+          const validDetails = details.filter((d) => d !== null);
+          if (validDetails.length > 0) {
+            const notificationText = `\n� New Email(s) Received! 🔔\n${validDetails.join('\n')}\n`;
+            console.log(notificationText);
+            // TODO: Inject this into the active session or a dedicated notification channel
+            // For now, we just log it to the console as a proof of concept.
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error processing Gmail notification:', error);
+      }
+    }
   }
 
   /**

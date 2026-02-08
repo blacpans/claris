@@ -21,9 +21,7 @@ export async function searchFn({ query, num = 5 }: { query: string; num?: number
     const auth = new google.auth.GoogleAuth({
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     });
-    const authClient = await auth.getClient();
-
-    const discoveryengine = google.discoveryengine({ version: 'v1beta', auth: authClient });
+    const discoveryengine = google.discoveryengine({ version: 'v1beta', auth });
 
     const parent = `projects/${projectId}/locations/${location}/collections/default_collection/dataStores/${dataStoreId}/servingConfigs/${servingConfigId}`;
 

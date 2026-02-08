@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authorize } from './auth.js';
 
 export async function getYouTubeClient() {
-  const auth = await authorize();
+  const auth = await authorize('youtube');
   return google.youtube({ version: 'v3', auth });
 }
 

@@ -54,9 +54,69 @@ export async function listUnreadEmailsFn({ maxResults = 5 }: { maxResults?: numb
   }
 }
 
+const watchGmailSchema = z.object({
+  topicName: z
+    .string()
+    .optional()
+    .describe(
+      'The full name of the Cloud Pub/Sub topic. Defaults to "projects/${GOOGLE_CLOUD_PROJECT}/topics/claris-events" if not specified.',
+    ),
+});
+
+export async function watchGmailFn({ topicName }: { topicName?: string }) {
+  try {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+    if (!projectId) {
+      throw new Error('GOOGLE_CLOUD_PROJECT is not set in .env');
+    }
+
+    const finalTopicName = topicName || `projects/${projectId}/topics/claris-events`;
+
+    const gmail = await getGmailClient();
+    const res = await gmail.users.watch({
+      userId: 'me',
+      requestBody: {
+        topicName: finalTopicName,
+        labelIds: ['INBOX'], // Watch for changes in Inbox
+        labelFilterAction: 'include',
+      },
+    });
+
+    return `Successfully set up Gmail watch! 📡\nTopic: ${finalTopicName}\nHistory ID: ${res.data.historyId}\nExpiration: ${new Date(Number(res.data.expiration)).toLocaleString()}`;
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    return `Failed to set up Gmail watch 😢: ${err.message || String(error)}`;
+  }
+}
+
+export async function stopWatchGmailFn() {
+  try {
+    const gmail = await getGmailClient();
+    await gmail.users.stop({ userId: 'me' });
+    return 'Successfully stopped Gmail notifications. 🛑';
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    return `Failed to stop Gmail watch 😢: ${err.message || String(error)}`;
+  }
+}
+
 export const listUnreadEmails = new FunctionTool({
   name: 'listUnreadEmails',
   description: "List unread emails from the user's Gmail inbox.",
   parameters: listUnreadEmailsSchema,
   execute: listUnreadEmailsFn,
+});
+
+export const watchGmail = new FunctionTool({
+  name: 'watchGmail',
+  description: 'Start watching Gmail for new emails and push notifications to a Cloud Pub/Sub topic.',
+  parameters: watchGmailSchema,
+  execute: watchGmailFn,
+});
+
+export const stopWatchGmail = new FunctionTool({
+  name: 'stopWatchGmail',
+  description: 'Stop watching Gmail notifications.',
+  parameters: z.object({}),
+  execute: stopWatchGmailFn,
 });

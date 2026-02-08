@@ -2,12 +2,12 @@
 
 import '../config/env.js';
 import { Command } from 'commander';
-import { chat } from './chat.js';
 import { auth } from './commands/auth.js';
+import { chat } from './commands/chat.js';
 import { live } from './commands/live.js';
 import { start } from './commands/start.js';
+import { status } from './commands/status.js';
 import { stop } from './commands/stop.js';
-import { status } from './status.js';
 
 const program = new Command();
 

@@ -25,6 +25,8 @@ import {
   searchFiles,
   searchPlaces,
   searchVideos,
+  stopWatchGmail,
+  watchGmail,
 } from '@/tools/index.js';
 import { CLARIS_INSTRUCTIONS, REVIEW_CONTEXT_INSTRUCTION, STYLE_PROMPTS } from './prompts.js';
 
@@ -80,6 +82,8 @@ export async function createClarisAgent(context?: ClarisContext) {
           listUpcomingEvents,
           createEvent,
           listUnreadEmails,
+          watchGmail,
+          stopWatchGmail,
           listTasks,
           addTask,
           createSheet,
