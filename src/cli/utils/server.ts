@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { type StdioOptions, spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fkill from 'fkill';
@@ -7,10 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../../..');
 
-export async function startServer(
-  // biome-ignore lint/suspicious/noExplicitAny: stdio options can be complex
-  options: { detached?: boolean; stdio?: 'inherit' | 'ignore' | any; port?: number } = {},
-) {
+export async function startServer(options: { detached?: boolean; stdio?: StdioOptions; port?: number } = {}) {
   const isDev = process.env.NODE_ENV !== 'production';
   let command: string;
   let args: string[];
