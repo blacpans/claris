@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../../..');
 
-// biome-ignore lint/suspicious/noExplicitAny: stdio options can be complex
 export async function startServer(
+  // biome-ignore lint/suspicious/noExplicitAny: stdio options can be complex
   options: { detached?: boolean; stdio?: 'inherit' | 'ignore' | any; port?: number } = {},
 ) {
   const isDev = process.env.NODE_ENV !== 'production';

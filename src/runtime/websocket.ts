@@ -1,7 +1,6 @@
 import type { Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { ServerLiveSession } from '@/core/live/ServerLiveSession.js';
-import { adkRunner } from '@/runtime/runner.js';
 
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ server, path: '/ws/live' });
