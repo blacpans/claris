@@ -167,7 +167,7 @@ export class MemoryService {
     const lines = text.split('\n');
 
     for (const line of lines) {
-      if ((currentChunk + line).length > maxLength) {
+      if (currentChunk.length + line.length > maxLength) {
         if (currentChunk) chunks.push(currentChunk);
         currentChunk = `${line}\n`;
       } else {
