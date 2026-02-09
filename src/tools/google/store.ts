@@ -21,28 +21,36 @@ export interface SavedCredentials {
  * Interface for Credential Storage
  */
 export interface CredentialStore {
-  save(credentials: SavedCredentials): Promise<void>;
-  load(): Promise<SavedCredentials | null>;
+  save(credentials: SavedCredentials, profile?: string): Promise<void>;
+  load(profile?: string): Promise<SavedCredentials | null>;
 }
 
 /**
  * File-based Credential Store (Local)
  */
 export class FileCredentialStore implements CredentialStore {
-  private readonly filePath: string;
+  private readonly baseFilePath: string;
 
   constructor(filePath = 'token.json') {
-    this.filePath = path.resolve(process.cwd(), filePath);
+    this.baseFilePath = path.resolve(process.cwd(), filePath);
   }
 
-  async save(credentials: SavedCredentials): Promise<void> {
+  private getFilePath(profile?: string): string {
+    if (!profile) return this.baseFilePath;
+    const ext = path.extname(this.baseFilePath);
+    const name = path.basename(this.baseFilePath, ext);
+    const dir = path.dirname(this.baseFilePath);
+    return path.join(dir, `${name}_${profile}${ext}`);
+  }
+
+  async save(credentials: SavedCredentials, profile?: string): Promise<void> {
     const payload = JSON.stringify(credentials);
-    await fs.writeFile(this.filePath, payload);
+    await fs.writeFile(this.getFilePath(profile), payload);
   }
 
-  async load(): Promise<SavedCredentials | null> {
+  async load(profile?: string): Promise<SavedCredentials | null> {
     try {
-      const content = await fs.readFile(this.filePath, 'utf-8');
+      const content = await fs.readFile(this.getFilePath(profile), 'utf-8');
       return JSON.parse(content) as SavedCredentials;
     } catch (_error) {
       return null;
@@ -56,22 +64,27 @@ export class FileCredentialStore implements CredentialStore {
 export class FirestoreCredentialStore implements CredentialStore {
   private readonly db: Firestore;
   private readonly collectionName: string;
-  private readonly docId: string;
+  private readonly baseDocId: string;
 
   constructor(collectionName = 'claris-auth', docId = 'google-credentials') {
     this.db = new Firestore({ ignoreUndefinedProperties: true });
     this.collectionName = collectionName;
-    this.docId = docId;
+    this.baseDocId = docId;
   }
 
-  async save(credentials: SavedCredentials): Promise<void> {
-    // Remove undefined values to avoid Firestore errors (handled by helper in session, but let's be safe here too)
+  private getDocId(profile?: string): string {
+    if (!profile) return this.baseDocId;
+    return `${this.baseDocId}-${profile}`;
+  }
+
+  async save(credentials: SavedCredentials, profile?: string): Promise<void> {
+    // Remove undefined values to avoid Firestore errors
     const cleanCredentials = JSON.parse(JSON.stringify(credentials));
-    await this.db.collection(this.collectionName).doc(this.docId).set(cleanCredentials);
+    await this.db.collection(this.collectionName).doc(this.getDocId(profile)).set(cleanCredentials);
   }
 
-  async load(): Promise<SavedCredentials | null> {
-    const doc = await this.db.collection(this.collectionName).doc(this.docId).get();
+  async load(profile?: string): Promise<SavedCredentials | null> {
+    const doc = await this.db.collection(this.collectionName).doc(this.getDocId(profile)).get();
     if (!doc.exists) {
       return null;
     }

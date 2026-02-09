@@ -1,10 +1,27 @@
 import { type Auth, google } from 'googleapis';
 import { getCredentialStore, type SavedCredentials } from './store.js';
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/gmail.readonly'];
+// Main account scopes (Drive, Photos, etc.)
+const DEFAULT_SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/tasks', // Tasks
+  'https://www.googleapis.com/auth/spreadsheets', // Sheets
+  'https://www.googleapis.com/auth/drive.readonly', // Drive (Search - metadata.readonly sometimes insufficient for query filtering)
+  'https://www.googleapis.com/auth/drive.file', // Drive (File access)
+  'https://www.googleapis.com/auth/photoslibrary.readonly', // Photos
+  'https://www.googleapis.com/auth/contacts.readonly', // People (Contacts)
+  'https://www.googleapis.com/auth/user.birthday.read', // People (Birthdays)
+];
 
-// メモリ上のキャッシュされたクライアント
-let cachedClient: Auth.JWT | Auth.OAuth2Client | null = null;
+// YouTube account scopes (Brand Account)
+const YOUTUBE_SCOPES = [
+  'https://www.googleapis.com/auth/youtube.readonly', // YouTube (Search/Playlists)
+  'https://www.googleapis.com/auth/youtube.force-ssl', // YouTube (Manage)
+];
+
+// メモリ上のキャッシュされたクライアント (key: profile name or 'default')
+const cachedClients: Record<string, Auth.JWT | Auth.OAuth2Client> = {};
 
 /**
  * Type Guard for OAuth2Client
@@ -24,15 +41,21 @@ function isJWT(client: unknown): client is Auth.JWT {
  * トークンをストアから読み込む
  * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
  */
-async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Client | null> {
+/**
+ * トークンをストアから読み込む
+ * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
+ */
+async function loadSavedCredentialsIfExist(profile?: string): Promise<Auth.JWT | Auth.OAuth2Client | null> {
+  const cacheKey = profile || 'default';
+
   // キャッシュがあればそれを返す
-  if (cachedClient) {
-    return cachedClient;
+  if (cachedClients[cacheKey]) {
+    return cachedClients[cacheKey];
   }
 
   try {
     const store = getCredentialStore();
-    const credentials = await store.load();
+    const credentials = await store.load(profile);
     if (!credentials) return null;
 
     // googleapis の fromJSON は authorized_user 形式を期待
@@ -46,7 +69,7 @@ async function loadSavedCredentialsIfExist(): Promise<Auth.JWT | Auth.OAuth2Clie
     const client = google.auth.fromJSON(fullCredentials);
 
     if (isOAuth2Client(client) || isJWT(client)) {
-      cachedClient = client;
+      cachedClients[cacheKey] = client;
       return client;
     }
     return null;
@@ -92,14 +115,18 @@ function createOAuth2Client(): Auth.OAuth2Client {
  * トークンをストアに保存する
  * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
  */
-async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
+/**
+ * トークンをストアに保存する
+ * 環境変数 TOKEN_STORE_TYPE に応じて File or Firestore を自動選択
+ */
+async function saveCredentials(client: Auth.OAuth2Client, profile?: string): Promise<void> {
   const { client_id, client_secret } = loadCredentials();
   const store = getCredentialStore();
 
   // refresh_token がない場合は既存のものを引き継ぐ
   let refreshToken = client.credentials.refresh_token as string | undefined | null;
   if (!refreshToken) {
-    const existing = await store.load();
+    const existing = await store.load(profile);
     if (existing?.refresh_token) {
       refreshToken = existing.refresh_token;
     }
@@ -112,22 +139,38 @@ async function saveCredentials(client: Auth.OAuth2Client): Promise<void> {
     refresh_token: refreshToken,
   };
 
-  await store.save(payload);
+  await store.save(payload, profile);
   // 新しいクレデンシャル保存時にキャッシュを無効化
-  cachedClient = null;
-  console.log('[Auth] Saved Google OAuth credentials');
+  const cacheKey = profile || 'default';
+  delete cachedClients[cacheKey];
+  console.log(`[Auth] Saved Google OAuth credentials for profile: ${profile || 'default'}`);
 }
 
 /**
  * 認証用URLを生成する（サーバーサイドフロー用）
  */
-export async function getAuthUrl(state?: string): Promise<string> {
+/**
+ * 認証用URLを生成する（サーバーサイドフロー用）
+ * state パラメータに profile 情報をエンコードして渡す
+ */
+export async function getAuthUrl(state?: string, profile?: string): Promise<string> {
   const client = createOAuth2Client();
+
+  // プロファイルに応じてスコープを切り替え
+  const scopes = profile === 'youtube' ? YOUTUBE_SCOPES : DEFAULT_SCOPES;
+
+  // state に profile 情報を埋め込む (JSON文字列としてエンコード)
+  const stateObj = {
+    originalState: state,
+    profile,
+  };
+  const encodedState = Buffer.from(JSON.stringify(stateObj)).toString('base64');
+
   const opts = {
     access_type: 'offline',
-    scope: SCOPES,
+    scope: scopes,
     prompt: 'consent', // 再認証時もrefresh_tokenを確実に取得
-    ...(state ? { state } : {}),
+    state: encodedState,
   };
   return client.generateAuthUrl(opts);
 }
@@ -135,13 +178,27 @@ export async function getAuthUrl(state?: string): Promise<string> {
 /**
  * 認証コールバックを処理する（サーバーサイドフロー用）
  * @param code - Google から返ってきた認証コード
+ * @param state - Google から返ってきた state パラメータ (profile 情報含む)
  */
-export async function handleAuthCallback(code: string): Promise<void> {
+export async function handleAuthCallback(code: string, state?: string): Promise<void> {
   try {
+    let profile: string | undefined;
+
+    // state から profile を復元
+    if (state) {
+      try {
+        const decodedState = Buffer.from(state, 'base64').toString('utf-8');
+        const stateObj = JSON.parse(decodedState);
+        profile = stateObj.profile;
+      } catch (e) {
+        console.warn('Failed to parse state parameter:', e);
+      }
+    }
+
     const client = createOAuth2Client();
     const { tokens } = await client.getToken(code);
     client.setCredentials(tokens);
-    await saveCredentials(client);
+    await saveCredentials(client, profile);
   } catch (error) {
     console.error('Failed to exchange code for tokens:', error);
     throw new Error('Failed to complete authentication process');
@@ -152,14 +209,20 @@ export async function handleAuthCallback(code: string): Promise<void> {
  * Load or request authorization to call APIs.
  * 保存済みトークンがあればそれを使用、なければ認証が必要
  */
-export async function authorize(): Promise<Auth.JWT | Auth.OAuth2Client> {
-  const client = await loadSavedCredentialsIfExist();
+/**
+ * Load or request authorization to call APIs.
+ * 保存済みトークンがあればそれを使用、なければ認証が必要
+ */
+export async function authorize(profile?: string): Promise<Auth.JWT | Auth.OAuth2Client> {
+  const client = await loadSavedCredentialsIfExist(profile);
   if (client) {
     return client;
   }
 
   // トークンがない場合はエラー（サーバー環境では /auth/google エンドポイントへ誘導）
-  throw new Error('No saved credentials found. Please visit /auth/google to authenticate.');
+  throw new Error(
+    `No saved credentials found for profile "${profile || 'default'}". Please visit /auth/google to authenticate.`,
+  );
 }
 
 /**

@@ -6,7 +6,28 @@
  */
 import { Gemini, LlmAgent } from '@google/adk';
 import { getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
-import { createEvent, listUnreadEmails, listUpcomingEvents } from '@/tools/index.js';
+import {
+  addTask,
+  appendToSheet,
+  createEvent,
+  createSheet,
+  getDirections,
+  getWeather,
+  googleSearch,
+  listConnections,
+  listPhotos,
+  listPlaylists,
+  listTasks,
+  listUnreadEmails,
+  listUpcomingEvents,
+  readSheet,
+  searchContacts,
+  searchFiles,
+  searchPlaces,
+  searchVideos,
+  stopWatchGmail,
+  watchGmail,
+} from '@/tools/index.js';
 import { CLARIS_INSTRUCTIONS, REVIEW_CONTEXT_INSTRUCTION, STYLE_PROMPTS } from './prompts.js';
 
 export type AgentMode = 'chat' | 'review' | string;
@@ -57,7 +78,28 @@ export async function createClarisAgent(context?: ClarisContext) {
   const tools =
     mode === 'review'
       ? [] // No tools needed for pure code review for now (maybe generic search later)
-      : [listUpcomingEvents, createEvent, listUnreadEmails];
+      : [
+          listUpcomingEvents,
+          createEvent,
+          listUnreadEmails,
+          watchGmail,
+          stopWatchGmail,
+          listTasks,
+          addTask,
+          createSheet,
+          readSheet,
+          appendToSheet,
+          searchPlaces,
+          getDirections,
+          getWeather,
+          googleSearch,
+          searchVideos,
+          listPlaylists,
+          searchFiles,
+          listPhotos,
+          searchContacts,
+          listConnections,
+        ];
 
   return new LlmAgent({
     name: agentName.toLowerCase().replace(/-/g, '_'),

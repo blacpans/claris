@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { CLI_MESSAGES } from './messages.js';
-import { startServer, waitForServer } from './utils/server.js';
+import { CLI_MESSAGES } from '../messages.js';
+import { startServer, waitForServer } from '../utils/server.js';
 
 export const chat = new Command(CLI_MESSAGES.COMMANDS.CHAT.NAME)
   .description(CLI_MESSAGES.COMMANDS.CHAT.DESCRIPTION)
