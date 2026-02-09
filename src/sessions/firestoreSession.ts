@@ -121,6 +121,7 @@ export class FirestoreSessionService {
       .collection(this.collectionName)
       .where('appName', '==', request.appName)
       .where('userId', '==', request.userId)
+      .orderBy('lastUpdateTime', 'desc')
       .select('id', 'appName', 'userId', 'lastUpdateTime'); // Only fetch metadata
 
     if (request.offset !== undefined) {
