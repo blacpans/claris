@@ -33,6 +33,23 @@ Claris adapts her personality and expertise based on the file extension you are 
 | **Logic Soul** | 🟦 | Logic & Efficiency | `.py`, `.c`, `.sql`, `.sh` |
 | **Passion Soul** | 🟥 | Creativity & Speed | `.js`, `.md`, `.css`, `.html` |
 
+## Authentication 🔑
+
+Claris requires Google authentication to access services like Drive, Calendar, and YouTube.
+
+### Default Profile (Main)
+For standard services (Drive, Docs, Calendar, Gmail, etc.):
+```bash
+claris auth
+```
+
+### YouTube Brand Account (Optional)
+If you manage a YouTube channel via a Brand Account, you must authenticate separately with the "youtube" profile:
+```bash
+claris auth --profile youtube
+```
+*Note: This creates a separate `token_youtube.json` file. Claris will automatically switch to this credential when using YouTube tools.*
+
 ## Configuration ⚙️
 
 You can customize Claris's behavior by creating a `claris.config.json` file in your project root.
