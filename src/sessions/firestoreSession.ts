@@ -121,7 +121,6 @@ export class FirestoreSessionService {
       .where('userId', '==', request.userId)
       .orderBy('lastUpdateTime', 'desc')
       .limit(1)
-      .select('id', 'appName', 'userId', 'lastUpdateTime') // Only fetch metadata
       .get();
 
     const doc = snapshot.docs[0];
@@ -131,12 +130,8 @@ export class FirestoreSessionService {
 
     const data = doc.data() as Session;
     return {
-      id: data.id,
-      appName: data.appName,
-      userId: data.userId,
-      state: {},
+      ...data,
       events: [],
-      lastUpdateTime: data.lastUpdateTime,
     };
   }
 
