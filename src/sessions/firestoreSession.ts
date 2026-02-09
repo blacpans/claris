@@ -113,6 +113,12 @@ export class FirestoreSessionService {
 
   /**
    * Retrieves the latest session for a user.
+   *
+   * @remarks
+   * This query requires a Firestore Composite Index:
+   * - appName (ASC)
+   * - userId (ASC)
+   * - lastUpdateTime (DESC)
    */
   async getLatestSession(request: { appName: string; userId: string }): Promise<Session | null> {
     const snapshot = await this.db
