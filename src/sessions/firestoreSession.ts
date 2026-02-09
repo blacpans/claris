@@ -17,6 +17,8 @@ import type {
 } from '@google/adk';
 import { Firestore } from '@google-cloud/firestore';
 
+const DEFAULT_EVENT_LIMIT = 1000;
+
 export class FirestoreSessionService {
   private readonly db: Firestore;
   private readonly collectionName: string;
@@ -78,6 +80,11 @@ export class FirestoreSessionService {
     // Apply optional filters
     if (request.config?.afterTimestamp) {
       query = query.where('timestamp', '>', request.config.afterTimestamp);
+    }
+
+    // Prevent unbounded fetches by applying a default limit if no specific limit is requested
+    if (!request.config?.numRecentEvents) {
+      query = query.limit(DEFAULT_EVENT_LIMIT);
     }
 
     // Note: limitToLast is more efficient for "recent items" but tricky with 'asc' sort if we want the *very* last ones.
