@@ -12,7 +12,6 @@ function loadEnvFile(fileName: string) {
     // Suppress logs if already loaded in parent process
     const quiet = process.env.CLARIS_ENV_LOADED === 'true';
     if (!quiet) {
-      // @ts-expect-error - dotenv types might not have quiet yet depending on version, but the log suggests it
       dotenv.config({ path: filePath, quiet: true });
     }
   }

@@ -112,6 +112,35 @@ export class FirestoreSessionService {
   }
 
   /**
+   * Retrieves the latest session for a user.
+   */
+  async getLatestSession(request: { appName: string; userId: string }): Promise<Session | null> {
+    const snapshot = await this.db
+      .collection(this.collectionName)
+      .where('appName', '==', request.appName)
+      .where('userId', '==', request.userId)
+      .orderBy('lastUpdateTime', 'desc')
+      .limit(1)
+      .select('id', 'appName', 'userId', 'lastUpdateTime') // Only fetch metadata
+      .get();
+
+    const doc = snapshot.docs[0];
+    if (!doc) {
+      return null;
+    }
+
+    const data = doc.data() as Session;
+    return {
+      id: data.id,
+      appName: data.appName,
+      userId: data.userId,
+      state: {},
+      events: [],
+      lastUpdateTime: data.lastUpdateTime,
+    };
+  }
+
+  /**
    * Lists all sessions for a user.
    */
   async listSessions(request: ListSessionsRequest): Promise<ListSessionsResponse> {
