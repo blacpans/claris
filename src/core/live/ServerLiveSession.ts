@@ -2,7 +2,6 @@ import { GoogleGenAI, Modality, type Part } from '@google/genai';
 import { CLARIS_INSTRUCTIONS } from '@/agents/prompts.js';
 import '@/config/env.js';
 import { EventEmitter } from 'node:events';
-import type { ListSessionsRequest } from '@google/adk';
 import { MemoryService } from '@/core/memory/MemoryService.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
 
@@ -150,21 +149,13 @@ ${memory}`,
       }
 
       // 2. Short-term Memory (Recent Session)
-      const list = await this.sessionService.listSessions({
+      const latestSessionSummary = await this.sessionService.getLatestSession({
         appName: 'claris',
         userId: userId,
-      } as ListSessionsRequest);
-
-      if (!list.sessions || list.sessions.length === 0) {
-        // user 'anonymous' fallback removed for privacy
-        return `${longTermMemory}No previous conversation history.`.trim();
-      }
-
-      // Sort by lastUpdateTime desc
-      const sortedSessions = list.sessions.sort((a, b) => b.lastUpdateTime - a.lastUpdateTime);
-      const latestSessionSummary = sortedSessions[0];
+      });
 
       if (!latestSessionSummary) {
+        // user 'anonymous' fallback removed for privacy
         return `${longTermMemory}No previous conversation history.`.trim();
       }
 
