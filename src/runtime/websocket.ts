@@ -1,6 +1,7 @@
 import type { Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { ServerLiveSession } from '@/core/live/ServerLiveSession.js';
+import { notificationService } from '@/core/proactive/index.js';
 
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ server, path: '/ws/live' });
@@ -12,6 +13,9 @@ export function setupWebSocket(server: Server) {
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const userId = url.searchParams.get('userId') || 'anonymous';
     console.log(`👤 Connected user: ${userId}`);
+
+    // プロアクティブ通知のために WebSocket 接続を登録
+    notificationService.register(userId, ws);
 
     const liveSession = new ServerLiveSession();
     let isSessionStarted = false;
@@ -78,6 +82,8 @@ export function setupWebSocket(server: Server) {
       liveSession.off('interrupted', onInterrupted);
       liveSession.off('text', onText);
       liveSession.off('turnComplete', onTurnComplete);
+      // プロアクティブ通知の登録解除
+      notificationService.unregister(userId, ws);
       await liveSession.disconnect();
     });
 

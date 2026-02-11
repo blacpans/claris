@@ -242,6 +242,10 @@ async function startConnection() {
                 UI.updateCaption('');
               } else if (msg.type === 'text') {
                 UI.updateCaption(msg.text);
+              } else if (msg.type === 'proactive_message') {
+                // 自律型通知: Claris が自発的に話しかけてきた！
+                UI.appendMessage(msg.text, 'ai');
+                UI.showToast(msg.text, msg.priority);
               } else {
                 UI.log(`Server: ${event.data}`);
               }

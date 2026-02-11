@@ -1,6 +1,7 @@
 import { type Event, InMemoryRunner } from '@google/adk';
 import { createClarisAgent } from '@/agents/claris.js';
 import { PubSubListener } from '@/core/async/pubsub.js';
+import { eventCollector } from '@/core/proactive/index.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
 import { getGmailClient } from '@/tools/google/auth.js';
 
@@ -53,7 +54,7 @@ export class AdkRunnerService {
         const newMessages = history.data.history?.flatMap((h) => h.messagesAdded || []) || [];
 
         if (newMessages.length > 0) {
-          const details = await Promise.all(
+          const emails = await Promise.all(
             newMessages.map(async (msg) => {
               if (!msg.message?.id) return null;
               const m = await gmail.users.messages.get({
@@ -65,16 +66,14 @@ export class AdkRunnerService {
               const headers = m.data.payload?.headers;
               const subject = headers?.find((h) => h.name === 'Subject')?.value || '(No Subject)';
               const from = headers?.find((h) => h.name === 'From')?.value || '(Unknown)';
-              return `  - From: ${from}\n    Subject: ${subject}`;
+              return { from, subject };
             }),
           );
 
-          const validDetails = details.filter((d) => d !== null);
-          if (validDetails.length > 0) {
-            const notificationText = `\n� New Email(s) Received! 🔔\n${validDetails.join('\n')}\n`;
-            console.log(notificationText);
-            // TODO: Inject this into the active session or a dedicated notification channel
-            // For now, we just log it to the console as a proof of concept.
+          const validEmails = emails.filter((e): e is { from: string; subject: string } => e !== null);
+          if (validEmails.length > 0) {
+            // EventCollector に委譲: 正規化 + 即時通知
+            eventCollector.collectGmailEvent(parsedData.emailAddress, validEmails);
           }
         }
       } catch (error) {
