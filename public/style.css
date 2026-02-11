@@ -6,7 +6,7 @@
   --text-color: #fff;
   --text-muted: #aaa;
   --border-color: #444;
-  --link-color: #ff69b4;
+  --link-color: #4fc3f7;
   --primary-color: #ff69b4;
   --primary-gradient-start: #ff69b4;
   --primary-gradient-end: #da70d6;
@@ -564,6 +564,18 @@ h1 {
   border-radius: 4px;
   font-family: var(--font-family-mono);
   font-size: 0.9em;
+}
+.message a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition:
+    color 0.2s,
+    opacity 0.2s;
+}
+.message a:hover {
+  color: #81d4fa;
+  opacity: 0.9;
 }
 
 /* Live Mode Indicator - more prominent */
