@@ -7,6 +7,7 @@ let ws = null;
 let isConnected = false;
 let shouldReconnect = false;
 let currentUserId = null;
+let currentSessionId = null;
 let config = { version: 'v0.19.2', wsPath: '/ws/live' };
 
 function getWebSocketUrl() {
@@ -107,6 +108,7 @@ if (UI.inputArea) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: currentUserId || 'anonymous',
+          sessionId: currentSessionId,
           message: text,
         }),
       });
@@ -117,6 +119,9 @@ if (UI.inputArea) {
       if (data.error) {
         UI.appendMessage(`Error: ${data.error}`, 'ai');
       } else {
+        if (data.sessionId) {
+          currentSessionId = data.sessionId;
+        }
         UI.appendMessage(data.response, 'ai');
       }
     } catch (err) {
