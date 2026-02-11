@@ -101,3 +101,30 @@ export function updateLiveStatus(active) {
 
 // Set initial icon
 liveBtn.innerHTML = ICONS.phone;
+
+/**
+ * トースト通知を表示する（プロアクティブ通知用）
+ * @param {string} text - 通知テキスト
+ * @param {string} priority - 優先度 ('low' | 'medium' | 'high' | 'critical')
+ */
+export function showToast(text, priority = 'medium') {
+  const toast = document.createElement('div');
+  toast.className = `toast-notification toast-${priority}`;
+
+  // 最初の1行だけをトーストに表示（長文は省略）
+  const shortText = text.split('\n')[0].slice(0, 80);
+  toast.textContent = shortText;
+
+  document.body.appendChild(toast);
+
+  // アニメーション開始
+  requestAnimationFrame(() => {
+    toast.classList.add('toast-visible');
+  });
+
+  // 5秒後に自動消去
+  setTimeout(() => {
+    toast.classList.remove('toast-visible');
+    toast.addEventListener('transitionend', () => toast.remove());
+  }, 5000);
+}
