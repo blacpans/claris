@@ -1,8 +1,10 @@
-import * as Audio from './js/audio.js';
-import * as UI from './js/ui.js';
-import { AudioVisualizer } from './js/visualizer.js';
+import * as Audio from './audio.js';
+import { CONFIG, getWebSocketUrl } from './config.js';
+import * as UI from './ui.js';
+import { AudioVisualizer } from './visualizer.js';
 
-let ws;
+/** @type {WebSocket | null} */
+let ws = null;
 let isConnected = false;
 let shouldReconnect = false;
 
@@ -11,86 +13,92 @@ let isSpeaking = false;
 
 // Generate a random User ID for this session
 const userId = `web-${Math.random().toString(36).substring(2, 11)}`;
-
-const CLIENT_VERSION = 'v0.19.2';
-console.log(`🌸 Claris Client ${CLIENT_VERSION}`);
+console.log(`🌸 Claris Client ${CONFIG.CLIENT_VERSION}`);
 
 // Display Version
-const versionEl = document.getElementById('client-version');
-if (versionEl) versionEl.textContent = CLIENT_VERSION;
+const versionEl = document.getElementById('version-display');
+if (versionEl) versionEl.textContent = CONFIG.CLIENT_VERSION;
 
 // Textarea Auto-resize
-UI.messageInput.addEventListener('input', function () {
-  this.style.height = 'auto'; // Reset to calculate scrollHeight
-  const newHeight = Math.min(this.scrollHeight, 150); // Max height 150px
-  this.style.height = `${newHeight}px`;
-});
+if (UI.messageInput) {
+  UI.messageInput.addEventListener('input', function () {
+    this.style.height = 'auto'; // Reset to calculate scrollHeight
+    const newHeight = Math.min(this.scrollHeight, 150); // Max height 150px
+    this.style.height = `${newHeight}px`;
+  });
 
-// Handle Enter to Send
-UI.messageInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    if (UI.sendBtn.disabled) return;
-    UI.inputArea.requestSubmit();
-  }
-});
+  // Handle Enter to Send
+  UI.messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (UI.sendBtn.disabled) return;
+      if (UI.inputArea instanceof HTMLFormElement) {
+        UI.inputArea.requestSubmit();
+      }
+    }
+  });
+}
 
 // Handle Text Chat
-UI.inputArea.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const text = UI.messageInput.value.trim();
-  if (!text) return;
+if (UI.inputArea) {
+  UI.inputArea.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = UI.messageInput.value.trim();
+    if (!text) return;
 
-  UI.appendMessage(text, 'user');
-  UI.messageInput.value = '';
-  UI.messageInput.style.height = '50px';
+    UI.appendMessage(text, 'user');
+    UI.messageInput.value = '';
+    UI.messageInput.style.height = '50px';
 
-  UI.showLoading();
+    UI.showLoading();
 
-  try {
-    const res = await fetch('/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: userId,
-        message: text,
-      }),
-    });
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId,
+          message: text,
+        }),
+      });
 
-    const data = await res.json();
-    UI.hideLoading();
+      const data = await res.json();
+      UI.hideLoading();
 
-    if (data.error) {
-      UI.appendMessage(`Error: ${data.error}`, 'ai');
-    } else {
-      UI.appendMessage(data.response, 'ai');
+      if (data.error) {
+        UI.appendMessage(`Error: ${data.error}`, 'ai');
+      } else {
+        UI.appendMessage(data.response, 'ai');
+      }
+    } catch (err) {
+      console.error(err);
+      UI.hideLoading();
+      UI.appendMessage('Error: Failed to send message.', 'ai');
     }
-  } catch (err) {
-    console.error(err);
-    UI.hideLoading();
-    UI.appendMessage('Error: Failed to send message.', 'ai');
-  }
-});
+  });
+}
 
 // Live Button Handler
-UI.liveBtn.addEventListener('click', async () => {
-  UI.setLiveBtnLoading(true);
+if (UI.liveBtn) {
+  UI.liveBtn.addEventListener('click', async () => {
+    UI.setLiveBtnLoading(true);
 
-  try {
-    if (!isConnected) {
-      shouldReconnect = true;
-      await startConnection();
-    } else {
-      shouldReconnect = false;
-      stopConnection();
+    try {
+      if (!isConnected) {
+        shouldReconnect = true;
+        await startConnection();
+      } else {
+        shouldReconnect = false;
+        stopConnection();
+      }
+    } catch (err) {
+      console.error('Toggle connection failed:', err);
+    } finally {
+      UI.setLiveBtnLoading(false);
+      UI.updateLiveStatus(isConnected);
     }
-  } catch (err) {
-    console.error('Toggle connection failed:', err);
-  } finally {
-    UI.setLiveBtnLoading(false);
-    UI.updateLiveStatus(isConnected);
-  }
-});
+  });
+}
 
 // Initialize Visualizer (Ensure AudioVisualizer is imported or available)
 const visualizer = new AudioVisualizer('waveform');
@@ -104,6 +112,10 @@ if (closeBtn) {
   });
 }
 
+/**
+ * Starts the WebSocket connection and initializes audio/visualizer.
+ * @returns {Promise<void>}
+ */
 async function startConnection() {
   if (UI.statusEl) UI.statusEl.textContent = 'Connecting...';
   UI.updateCaption('');
@@ -113,8 +125,7 @@ async function startConnection() {
       try {
         await Audio.initAudioContext();
 
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+        const wsUrl = getWebSocketUrl();
 
         ws = new WebSocket(wsUrl);
         ws.binaryType = 'arraybuffer';
@@ -137,6 +148,7 @@ async function startConnection() {
             // Show Overlay
             if (callOverlay) {
               if (typeof callOverlay.showModal === 'function') {
+                // @ts-expect-error
                 callOverlay.showModal();
               } else {
                 callOverlay.style.display = 'flex';
@@ -204,10 +216,14 @@ async function startConnection() {
   });
 }
 
+/**
+ * Stops the WebSocket connection and resets UI state.
+ */
 function stopConnection() {
   if (ws) {
     ws.onclose = null;
     ws.close();
+    ws = null;
   }
 
   Audio.stopAudio();
@@ -215,6 +231,7 @@ function stopConnection() {
 
   if (callOverlay) {
     if (typeof callOverlay.close === 'function') {
+      // @ts-expect-error
       callOverlay.close();
     } else {
       callOverlay.style.display = 'none';
@@ -228,15 +245,18 @@ function stopConnection() {
   isConnected = false;
 }
 
+/**
+ * Loop to check playback state and update UI accordingly.
+ */
 function loopPlaybackState() {
   Audio.checkPlaybackState(isConnected, (isSpeakingNow) => {
     if (isSpeaking !== isSpeakingNow) {
       isSpeaking = isSpeakingNow;
       if (isSpeaking) {
-        UI.liveBtn.style.boxShadow = '0 0 20px #ffeb3b';
+        if (UI.liveBtn) UI.liveBtn.style.boxShadow = '0 0 20px #ffeb3b';
         if (UI.statusEl) UI.statusEl.textContent = 'Claris Speaking... (Mic Muted)';
       } else {
-        UI.liveBtn.style.boxShadow = '0 4px 15px rgba(255, 75, 75, 0.5)'; // Reset to active red shadow
+        if (UI.liveBtn) UI.liveBtn.style.boxShadow = '0 4px 15px rgba(255, 75, 75, 0.5)'; // Reset to active red shadow
         // Note: UI.updateLiveStatus(true) sets it to red,
         // but manual override in checkPlaybackState needs careful reset.
         // Actually updateLiveStatus manages base state.
@@ -249,17 +269,20 @@ function loopPlaybackState() {
   if (isConnected) {
     requestAnimationFrame(loopPlaybackState);
   } else {
-    UI.liveBtn.style.boxShadow = 'none'; // Clear on disconnect
+    if (UI.liveBtn) UI.liveBtn.style.boxShadow = 'none'; // Clear on disconnect
   }
 }
 
 // ==========================================
 // Microphone Selection Logic
 // ==========================================
-let selectedMicId = localStorage.getItem('claris-mic-id');
+let selectedMicId = localStorage.getItem('claris-mic-id') || '';
 const micSelector = document.getElementById('mic-selector');
 const micSelectorOverlay = document.getElementById('mic-selector-overlay');
 
+/**
+ * Populates microphone selectors with available audio input devices.
+ */
 async function populateMicSelectors() {
   // Request permission first to get labels (if not already granted)
   try {
@@ -292,13 +315,20 @@ async function populateMicSelectors() {
 // Initial population
 populateMicSelectors();
 
+/**
+ * Handles microphone selection change.
+ * @param {Event} e - The change event
+ */
 function handleMicChange(e) {
+  // @ts-expect-error
   selectedMicId = e.target.value;
   localStorage.setItem('claris-mic-id', selectedMicId);
   UI.log(`🎤 Mic changed to: ${selectedMicId.slice(0, 8)}...`);
 
   // Sync other selectors
+  // @ts-expect-error
   if (micSelector) micSelector.value = selectedMicId;
+  // @ts-expect-error
   if (micSelectorOverlay) micSelectorOverlay.value = selectedMicId;
 
   // If currently connected, restart mic
