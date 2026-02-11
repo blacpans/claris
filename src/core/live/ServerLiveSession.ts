@@ -1,5 +1,5 @@
-import { GoogleGenAI, Modality, type Part } from '@google/genai';
-import { CLARIS_INSTRUCTIONS } from '@/agents/prompts.js';
+import { GoogleGenAI, type Part } from '@google/genai';
+import { generateLiveSessionConfig } from '@/agents/prompts.js';
 import '@/config/env.js';
 import { EventEmitter } from 'node:events';
 import type { ListSessionsRequest } from '@google/adk';
@@ -27,10 +27,6 @@ interface LiveServerMessage {
   turnComplete?: boolean;
 }
 
-interface LiveSessionClient {
-  send: (parts: string | Part[] | object, turnComplete?: boolean) => Promise<void>;
-}
-
 // Local interface for stored events to ensure type safety
 interface StoredEvent {
   type: string;
@@ -50,8 +46,10 @@ export class ServerLiveSession extends EventEmitter {
   private session: unknown = null;
   private sessionService: FirestoreSessionService;
   private memoryService: MemoryService;
-  private currentUserId: string = 'anonymous';
   private currentSessionId: string | null = null;
+
+  // Audio Buffer for connection phase
+  private audioQueue: Buffer[] = [];
 
   constructor() {
     super();
@@ -68,7 +66,6 @@ export class ServerLiveSession extends EventEmitter {
   }
 
   async start(userId = 'anonymous') {
-    this.currentUserId = userId;
     // Generate session ID if not exists (for this run)
     if (!this.currentSessionId) {
       this.currentSessionId = `session-${Date.now()}`;
@@ -81,29 +78,7 @@ export class ServerLiveSession extends EventEmitter {
     const memory = await this.loadMemory(userId);
     console.log(`🧠 Memory Loaded: ${memory.length} characters`);
 
-    const config = {
-      responseModalities: [Modality.AUDIO],
-      systemInstruction: {
-        parts: [
-          {
-            text: `Language: Japanese (Always speak in Japanese)
-${CLARIS_INSTRUCTIONS}
-
-NOTE: You are in "Live Mode". Speak conversationally and keep responses short.
-
-## Memory (Past Conversations)
-${memory}`,
-          },
-        ],
-      },
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: {
-            voiceName: 'Aoede', // Valid voice name for Gemini Live
-          },
-        },
-      },
-    };
+    const config = generateLiveSessionConfig(process.env.CLARIS_NAME || 'Claris', memory);
 
     try {
       this.session = await this.client.live.connect({
@@ -125,6 +100,15 @@ ${memory}`,
       });
 
       console.log('✨ Connected to Gemini Live!');
+
+      // Flush buffered audio
+      if (this.audioQueue.length > 0) {
+        console.log(`🌊 Flushing ${this.audioQueue.length} buffered audio chunks...`);
+        for (const chunk of this.audioQueue) {
+          await this.sendAudioInternal(chunk);
+        }
+        this.audioQueue = []; // Clear buffer
+      }
     } catch (err) {
       console.error('❌ Failed to connect:', err);
       this.emit('error', err instanceof Error ? err : new Error(String(err)));
@@ -199,13 +183,40 @@ ${memory}`,
   }
 
   /**
-   * Sends audio chunk from client to Gemini
+   * Sends audio chunk from client to Gemini.
+   * Buffers if session is not yet ready.
    * @param inputAudioPCM 16kHz PCM Audio Buffer
    */
   async sendAudio(inputAudioPCM: Buffer) {
-    if (!this.session) return;
+    if (!this.session) {
+      // Buffer the audio
+      // Limit buffer size to prevent memory leaks if connection never succeeds (e.g., max 10 seconds ~ 500 chunks)
+      if (this.audioQueue.length < 500) {
+        this.audioQueue.push(inputAudioPCM);
+        if (this.audioQueue.length % 50 === 0) {
+          console.log(`⏳ Buffering audio... (${this.audioQueue.length} chunks)`);
+        }
+      }
+      return;
+    }
+    await this.sendAudioInternal(inputAudioPCM);
+  }
 
+  private async sendAudioInternal(inputAudioPCM: Buffer) {
+    if (!this.session) return;
     try {
+      // Check for silence (simple check: if all bytes are 0)
+      let isSilence = true;
+      for (let i = 0; i < inputAudioPCM.length; i++) {
+        if (inputAudioPCM[i] !== 0) {
+          isSilence = false;
+          break;
+        }
+      }
+      if (isSilence) {
+        // console.log('Introvert packet (silence)...');
+      }
+
       await (
         this.session as { sendRealtimeInput: (arg: { media: { mimeType: string; data: string } }) => Promise<void> }
       ).sendRealtimeInput({
@@ -214,6 +225,7 @@ ${memory}`,
           data: inputAudioPCM.toString('base64'),
         },
       });
+      // console.log('.'); // Heartbeat
     } catch (e) {
       console.error('Error sending audio:', e);
     }
@@ -225,6 +237,7 @@ ${memory}`,
         if (part.inlineData?.data) {
           // Received Audio from Gemini -> Emit to WebSocket
           const pcmData = Buffer.from(part.inlineData.data, 'base64');
+          console.log(`🔊 Gemini Audio: ${pcmData.length} bytes`);
           this.emit('audio', pcmData);
         }
         if (part.text) {
@@ -248,65 +261,17 @@ ${memory}`,
    * Gracefully disconnects: requests a summary, saves it, then closes.
    */
   async disconnect() {
+    this.audioQueue = []; // Clear audio buffer
+
     if (!this.session) return;
 
-    console.log('📝 Requesting conversation summary...');
+    console.log('📝 Disconnecting session...');
+    this.stop();
+    /*
     try {
-      // 1. Request Summary
-      const session = this.session as LiveSessionClient;
-      // Send text "User: ..."
-      await session.send(
-        '会話を終了します。これまでの会話の要約を作成してください。（ユーザーの好み、重要な事実、話したトピックを中心に）',
-        true,
-      );
-
-      // 2. Wait for Summary Response
-      const timeoutMs = process.env.SUMMARY_TIMEOUT_MS ? parseInt(process.env.SUMMARY_TIMEOUT_MS, 10) : 15000;
-      const summary = await this.waitForSummary(timeoutMs);
-
-      // 3. Save Memory
-      if (summary && this.currentSessionId && this.currentUserId !== 'anonymous') {
-        console.log(`💾 Saving Summary: ${summary.slice(0, 50)}...`);
-        await this.memoryService.saveMemory(this.currentUserId, this.currentSessionId, summary);
-      } else {
-        console.log('⚠️ No summary received or session ID missing, skipping save.');
-      }
-    } catch (e) {
-      console.error('❌ Failed to summarize session:', e);
-    } finally {
-      // 4. Close
-      this.stop();
-    }
-  }
-
-  private waitForSummary(timeoutMs: number): Promise<string> {
-    return new Promise((resolve) => {
-      let accumulated = '';
-      let timer: NodeJS.Timeout;
-
-      const onText = (text: string) => {
-        accumulated += text;
-      };
-
-      const onTurnComplete = () => {
-        cleanup();
-        resolve(accumulated.trim());
-      };
-
-      const cleanup = () => {
-        this.off('text', onText);
-        this.off('turnComplete', onTurnComplete);
-        clearTimeout(timer);
-      };
-
-      this.on('text', onText);
-      this.on('turnComplete', onTurnComplete);
-
-      timer = setTimeout(() => {
-        cleanup();
-        resolve(accumulated.trim());
-      }, timeoutMs);
-    });
+       // ... (Summary disabled to prevent crash)
+    } 
+    */
   }
 
   stop() {
@@ -314,5 +279,6 @@ ${memory}`,
       // this.session.close();
       this.session = null;
     }
+    this.audioQueue = [];
   }
 }

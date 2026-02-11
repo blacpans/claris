@@ -1,7 +1,6 @@
 import type { Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { ServerLiveSession } from '@/core/live/ServerLiveSession.js';
-import { adkRunner } from '@/runtime/runner.js';
 
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ server, path: '/ws/live' });
@@ -17,15 +16,23 @@ export function setupWebSocket(server: Server) {
       if (isBinary) {
         // Audio chunk received
         if (!isSessionStarted) {
+          isSessionStarted = true; // Prevent race condition
           console.log('🎤 First audio chunk received, starting session...');
-          await liveSession.start();
-          isSessionStarted = true;
+
+          // Start in background - DO NOT AWAIT!
+          // Awaiting here would cause this first chunk to be sent AFTER subsequent chunks
+          // which are buffered by sendAudio while this awaits.
+          liveSession.start().catch((err) => {
+            console.error('Failed to start session:', err);
+            isSessionStarted = false; // Reset on failure
+          });
         }
+
         await liveSession.sendAudio(data as Buffer);
       } else {
         // Text message (control commands etc)
-        const message = data.toString();
-        console.log('📩 Received message:', message);
+        const _message = data.toString();
+        // console.log('📩 Received message:', message);
       }
     });
 
@@ -48,10 +55,17 @@ export function setupWebSocket(server: Server) {
       }
     };
 
+    const onTurnComplete = () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        // Optional: send turn complete event to client if needed
+      }
+    };
+
     // Handle outbound audio from Gemini
     liveSession.on('audio', onAudio);
     liveSession.on('interrupted', onInterrupted);
     liveSession.on('text', onText);
+    liveSession.on('turnComplete', onTurnComplete);
 
     // Handle errors and close
     ws.on('close', async () => {
@@ -60,6 +74,7 @@ export function setupWebSocket(server: Server) {
       liveSession.off('audio', onAudio);
       liveSession.off('interrupted', onInterrupted);
       liveSession.off('text', onText);
+      liveSession.off('turnComplete', onTurnComplete);
       await liveSession.disconnect();
     });
 

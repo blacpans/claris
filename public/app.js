@@ -1,288 +1,311 @@
-const micBtn = document.getElementById('mic-btn');
-const statusEl = document.getElementById('status');
-const _logsEl = document.getElementById('logs');
-const captionsEl = document.getElementById('captions');
+import * as Audio from './js/audio.js';
+import * as UI from './js/ui.js';
+import { AudioVisualizer } from './js/visualizer.js';
 
 let ws;
-let audioContext;
-let processor;
-let inputSource;
 let isConnected = false;
-let shouldReconnect = false; // Flag for auto-reconnection
+let shouldReconnect = false;
 
-// Audio Queue & State
-let nextStartTime = 0;
-let isPlaying = false;
-const _audioQueue = [];
+// Start visualizer loop or similar logic
+let isSpeaking = false;
 
-// Configs
-const SAMPLE_RATE_IN = 16000;
-const SAMPLE_RATE_OUT = 24000;
+// Generate a random User ID for this session
+const userId = `web-${Math.random().toString(36).substring(2, 11)}`;
 
-function log(msg) {
-  console.log(msg);
-}
+const CLIENT_VERSION = 'v0.19.2';
+console.log(`🌸 Claris Client ${CLIENT_VERSION}`);
 
-function updateCaption(text) {
-  captionsEl.textContent = text;
-}
+// Display Version
+const versionEl = document.getElementById('client-version');
+if (versionEl) versionEl.textContent = CLIENT_VERSION;
 
-micBtn.addEventListener('click', async () => {
-  if (!isConnected) {
-    shouldReconnect = true;
-    await startConnection();
-  } else {
-    shouldReconnect = false;
-    stopConnection();
+// Textarea Auto-resize
+UI.messageInput.addEventListener('input', function () {
+  this.style.height = 'auto'; // Reset to calculate scrollHeight
+  const newHeight = Math.min(this.scrollHeight, 150); // Max height 150px
+  this.style.height = `${newHeight}px`;
+});
+
+// Handle Enter to Send
+UI.messageInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (UI.sendBtn.disabled) return;
+    UI.inputArea.requestSubmit();
   }
 });
 
-async function startConnection() {
-  micBtn.classList.add('connecting');
-  statusEl.textContent = 'Connecting...';
-  captionsEl.textContent = '';
+// Handle Text Chat
+UI.inputArea.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = UI.messageInput.value.trim();
+  if (!text) return;
+
+  UI.appendMessage(text, 'user');
+  UI.messageInput.value = '';
+  UI.messageInput.style.height = '50px';
+
+  UI.showLoading();
 
   try {
-    // 1. Initialize Audio Context
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    nextStartTime = audioContext.currentTime;
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userId,
+        message: text,
+      }),
+    });
 
-    // 2. Connect WebSocket
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+    const data = await res.json();
+    UI.hideLoading();
 
-    ws = new WebSocket(wsUrl);
-    ws.binaryType = 'arraybuffer';
-
-    ws.onopen = async () => {
-      log('WebSocket Connected');
-      micBtn.classList.remove('connecting');
-      micBtn.classList.add('active');
-      statusEl.textContent = 'Connected (Listening)';
-      isConnected = true;
-
-      // Start Microphone
-      await startMicrophone();
-
-      // Start monitoring playback state
-      requestAnimationFrame(checkPlaybackState);
-    };
-
-    ws.onmessage = async (event) => {
-      if (event.data instanceof ArrayBuffer) {
-        // Audio received from server (24kHz PCM)
-        queueAudioChunk(event.data);
-      } else {
-        // Text message
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === 'interrupted') {
-            log('🛑 Interrupted by Server');
-            interruptPlayback();
-            captionsEl.textContent = ''; // Clear caption on interrupt
-          } else if (msg.type === 'text') {
-            updateCaption(msg.text); // Show caption
-          } else {
-            log(`Server: ${event.data}`);
-          }
-        } catch (_e) {
-          log(`Server: ${event.data}`);
-        }
-      }
-    };
-
-    ws.onclose = () => {
-      log('WebSocket Closed');
-      stopConnection();
-
-      if (shouldReconnect) {
-        log('🔄 Reconnecting in 3s...');
-        statusEl.textContent = 'Reconnecting...';
-        micBtn.classList.add('connecting');
-        setTimeout(() => {
-          if (shouldReconnect) startConnection();
-        }, 3000);
-      }
-    };
-
-    ws.onerror = (error) => {
-      log('WebSocket Error');
-      console.error(error);
-      // onerror usually leads to onclose, so we let onclose handle reconnect
-    };
-  } catch (err) {
-    log(`Error: ${err.message}`);
-    stopConnection();
-    // Immediate retry on start failure? Maybe better to let user retry or same logic.
-    if (shouldReconnect) {
-      setTimeout(() => {
-        if (shouldReconnect) startConnection();
-      }, 3000);
+    if (data.error) {
+      UI.appendMessage(`Error: ${data.error}`, 'ai');
+    } else {
+      UI.appendMessage(data.response, 'ai');
     }
+  } catch (err) {
+    console.error(err);
+    UI.hideLoading();
+    UI.appendMessage('Error: Failed to send message.', 'ai');
   }
+});
+
+// Live Button Handler
+UI.liveBtn.addEventListener('click', async () => {
+  UI.setLiveBtnLoading(true);
+
+  try {
+    if (!isConnected) {
+      shouldReconnect = true;
+      await startConnection();
+    } else {
+      shouldReconnect = false;
+      stopConnection();
+    }
+  } catch (err) {
+    console.error('Toggle connection failed:', err);
+  } finally {
+    UI.setLiveBtnLoading(false);
+    UI.updateLiveStatus(isConnected);
+  }
+});
+
+// Initialize Visualizer (Ensure AudioVisualizer is imported or available)
+const visualizer = new AudioVisualizer('waveform');
+const callOverlay = document.getElementById('call-overlay');
+const closeBtn = document.getElementById('end-call-btn');
+
+// Close btn handler
+if (closeBtn) {
+  closeBtn.addEventListener('click', () => {
+    stopConnection();
+  });
+}
+
+async function startConnection() {
+  if (UI.statusEl) UI.statusEl.textContent = 'Connecting...';
+  UI.updateCaption('');
+
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        await Audio.initAudioContext();
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen = async () => {
+          UI.log('WebSocket Connected');
+          if (UI.statusEl) UI.statusEl.textContent = 'Connected (Listening)';
+          isConnected = true;
+
+          try {
+            await Audio.startMicrophone(ws, selectedMicId);
+
+            // Start Visualizer
+            const analyser = Audio.getAnalyser();
+            if (analyser) {
+              visualizer.setAnalyser(analyser);
+              visualizer.start();
+            }
+
+            // Show Overlay
+            if (callOverlay) {
+              if (typeof callOverlay.showModal === 'function') {
+                callOverlay.showModal();
+              } else {
+                callOverlay.style.display = 'flex';
+              }
+              document.body.classList.add('call-active');
+
+              // Resize visualizer after modal is shown and layout is computed
+              setTimeout(() => {
+                visualizer.resize();
+              }, 50);
+            }
+
+            requestAnimationFrame(loopPlaybackState);
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        };
+
+        ws.onmessage = async (event) => {
+          if (event.data instanceof ArrayBuffer) {
+            Audio.queueAudioChunk(event.data);
+          } else {
+            try {
+              const msg = JSON.parse(event.data);
+              if (msg.type === 'interrupted') {
+                UI.log('🛑 Interrupted by Server');
+                Audio.interruptPlayback();
+                UI.updateCaption('');
+              } else if (msg.type === 'text') {
+                UI.updateCaption(msg.text);
+              } else {
+                UI.log(`Server: ${event.data}`);
+              }
+            } catch (_e) {
+              UI.log(`Server: ${event.data}`);
+            }
+          }
+        };
+
+        ws.onclose = () => {
+          UI.log('WebSocket Closed');
+          stopConnection();
+
+          if (shouldReconnect) {
+            UI.log('🔄 Reconnecting in 3s...');
+            if (UI.statusEl) UI.statusEl.textContent = 'Reconnecting...';
+            setTimeout(() => {
+              if (shouldReconnect) startConnection();
+            }, 3000);
+          }
+        };
+
+        ws.onerror = (error) => {
+          UI.log('WebSocket Error');
+          console.error(error);
+          reject(error);
+        };
+      } catch (err) {
+        UI.log(`Error: ${err.message}`);
+        stopConnection();
+        reject(err);
+      }
+    })();
+  });
 }
 
 function stopConnection() {
   if (ws) {
-    ws.onclose = null; // Prevent loop if manually stopping inside this function (though we handle it via flags mostly)
+    ws.onclose = null;
     ws.close();
   }
-  if (processor) processor.disconnect();
-  if (inputSource) inputSource.disconnect();
-  if (audioContext) audioContext.close();
 
-  micBtn.classList.remove('active');
-  micBtn.classList.remove('connecting');
-  statusEl.textContent = 'Tap to Connect';
-  isConnected = false;
-  isPlaying = false;
-}
+  Audio.stopAudio();
+  if (visualizer) visualizer.stop();
 
-async function startMicrophone() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    });
-
-    inputSource = audioContext.createMediaStreamSource(stream);
-
-    // Buffer size 4096 is a good balance for script processor
-    processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-    inputSource.connect(processor);
-    processor.connect(audioContext.destination);
-
-    processor.onaudioprocess = (e) => {
-      // Software Mute: Do not send audio if AI is speaking (plus 600ms echo tail)
-      if (audioContext && nextStartTime && audioContext.currentTime < nextStartTime + 0.6) {
-        return;
-      }
-
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        const inputData = e.inputBuffer.getChannelData(0);
-        // Downsample to 16kHz and send
-        const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, SAMPLE_RATE_IN);
-        ws.send(convertFloat32ToInt16(downsampled));
-      }
-    };
-
-    log('Microphone Active');
-  } catch (err) {
-    log(`Mic Error: ${err.message}`);
-    stopConnection();
-  }
-}
-
-function queueAudioChunk(arrayBuffer) {
-  // Convert Int16 PCM to Float32
-  const pcm16 = new Int16Array(arrayBuffer);
-  const float32 = new Float32Array(pcm16.length);
-  for (let i = 0; i < pcm16.length; i++) {
-    float32[i] = pcm16[i] / 32768; // Normalize to -1.0 to 1.0
-  }
-
-  // Create AudioBuffer
-  const buffer = audioContext.createBuffer(1, float32.length, SAMPLE_RATE_OUT);
-  buffer.getChannelData(0).set(float32);
-
-  const source = audioContext.createBufferSource();
-  source.buffer = buffer;
-  source.connect(audioContext.destination);
-
-  // Scheduling
-  // If nextStartTime is in the past, reset it to now (plus small buffer)
-  if (nextStartTime < audioContext.currentTime) {
-    nextStartTime = audioContext.currentTime + 0.05; // 50ms buffer
-  }
-
-  source.start(nextStartTime);
-  nextStartTime += buffer.duration;
-
-  // Track this source for potential cancellation?
-  activeSources.push(source);
-  source.onended = () => {
-    const idx = activeSources.indexOf(source);
-    if (idx > -1) activeSources.splice(idx, 1);
-  };
-}
-
-let activeSources = [];
-
-function interruptPlayback() {
-  // Stop all currently playing sources
-  activeSources.forEach((s) => {
-    try {
-      s.stop();
-    } catch (_e) {}
-  });
-  activeSources = [];
-
-  // Reset time
-  nextStartTime = audioContext.currentTime;
-}
-
-function checkPlaybackState() {
-  if (!isConnected) return;
-
-  // Determine if playing based on time
-  const isPlayingTime = audioContext.currentTime < nextStartTime;
-  // If we are technically "playing" but no sources are active (e.g. stopped manually), logic might drift.
-  // But generally, nextStartTime advances.
-
-  // Also check if sources are actually in the array (redundancy)
-  // Or simply:
-  const wasPlaying = isPlaying;
-  isPlaying = isPlayingTime || activeSources.length > 0;
-
-  if (isPlaying !== wasPlaying) {
-    if (isPlaying) {
-      micBtn.style.border = '4px solid #ff69b4'; // Visual cue for AI speaking
-      statusEl.textContent = 'Clarils Speaking... (Mic Muted)';
+  if (callOverlay) {
+    if (typeof callOverlay.close === 'function') {
+      callOverlay.close();
     } else {
-      micBtn.style.border = 'none';
-      statusEl.textContent = 'Listening...';
+      callOverlay.style.display = 'none';
     }
+    document.body.classList.remove('call-active');
   }
 
-  requestAnimationFrame(checkPlaybackState);
+  if (UI.statusEl) UI.statusEl.textContent = 'Tap to Connect';
+
+  UI.updateLiveStatus(false);
+  isConnected = false;
 }
 
-// --- Helpers ---
+function loopPlaybackState() {
+  Audio.checkPlaybackState(isConnected, (isSpeakingNow) => {
+    if (isSpeaking !== isSpeakingNow) {
+      isSpeaking = isSpeakingNow;
+      if (isSpeaking) {
+        UI.liveBtn.style.boxShadow = '0 0 20px #ffeb3b';
+        if (UI.statusEl) UI.statusEl.textContent = 'Claris Speaking... (Mic Muted)';
+      } else {
+        UI.liveBtn.style.boxShadow = '0 4px 15px rgba(255, 75, 75, 0.5)'; // Reset to active red shadow
+        // Note: UI.updateLiveStatus(true) sets it to red,
+        // but manual override in checkPlaybackState needs careful reset.
+        // Actually updateLiveStatus manages base state.
+        // Here we just add/remove glow.
+        if (UI.statusEl) UI.statusEl.textContent = 'Listening...';
+      }
+    }
+  });
 
-function downsampleBuffer(buffer, sampleRate, outSampleRate) {
-  if (outSampleRate === sampleRate) {
-    return buffer;
+  if (isConnected) {
+    requestAnimationFrame(loopPlaybackState);
+  } else {
+    UI.liveBtn.style.boxShadow = 'none'; // Clear on disconnect
   }
-  const ratio = sampleRate / outSampleRate;
-  const newLength = Math.round(buffer.length / ratio);
-  const result = new Float32Array(newLength);
-
-  for (let i = 0; i < newLength; i++) {
-    const originalPos = i * ratio;
-    const index = Math.floor(originalPos);
-    const decimal = originalPos - index;
-
-    // Linear Interpolation: y = y0 + (y1 - y0) * d
-    const y0 = buffer[index] || 0;
-    const y1 = buffer[index + 1] || y0;
-
-    result[i] = y0 + (y1 - y0) * decimal;
-  }
-  return result;
 }
 
-function convertFloat32ToInt16(buffer) {
-  let l = buffer.length;
-  const buf = new Int16Array(l);
-  while (l--) {
-    // Clamp to -1 to 1
-    const s = Math.max(-1, Math.min(1, buffer[l]));
-    // Convert to PCM16
-    buf[l] = s < 0 ? s * 0x8000 : s * 0x7fff;
+// ==========================================
+// Microphone Selection Logic
+// ==========================================
+let selectedMicId = localStorage.getItem('claris-mic-id');
+const micSelector = document.getElementById('mic-selector');
+const micSelectorOverlay = document.getElementById('mic-selector-overlay');
+
+async function populateMicSelectors() {
+  // Request permission first to get labels (if not already granted)
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => {
+      t.stop();
+    });
+  } catch (e) {
+    console.warn('Mic permission check failed:', e);
   }
-  return buf.buffer;
+
+  const devices = await Audio.getAudioDevices();
+  const optionsHTML =
+    '<option value="" disabled>Select Microphone...</option>' +
+    devices
+      .map((d) => {
+        const selected = d.deviceId === selectedMicId ? 'selected' : '';
+        return `<option value="${d.deviceId}" ${selected}>${d.label || `Microphone ${d.deviceId.slice(0, 5)}...`}</option>`;
+      })
+      .join('');
+
+  if (micSelector) micSelector.innerHTML = optionsHTML;
+  if (micSelectorOverlay) micSelectorOverlay.innerHTML = optionsHTML;
+
+  if (!selectedMicId && devices.length > 0) {
+    selectedMicId = devices[0].deviceId;
+  }
 }
+
+// Initial population
+populateMicSelectors();
+
+function handleMicChange(e) {
+  selectedMicId = e.target.value;
+  localStorage.setItem('claris-mic-id', selectedMicId);
+  UI.log(`🎤 Mic changed to: ${selectedMicId.slice(0, 8)}...`);
+
+  // Sync other selectors
+  if (micSelector) micSelector.value = selectedMicId;
+  if (micSelectorOverlay) micSelectorOverlay.value = selectedMicId;
+
+  // If currently connected, restart mic
+  if (isConnected && ws) {
+    Audio.startMicrophone(ws, selectedMicId).catch((err) => UI.log(`Failed to switch mic: ${err}`));
+  }
+}
+
+if (micSelector) micSelector.addEventListener('change', handleMicChange);
+if (micSelectorOverlay) micSelectorOverlay.addEventListener('change', handleMicChange);

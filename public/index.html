@@ -5,139 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Claris Live 🌸</title>
   <link rel="manifest" href="/manifest.json">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #1a1a1a;
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    h1 {
-      font-weight: 300;
-      letter-spacing: 2px;
-      margin-bottom: 2rem;
-      background: linear-gradient(45deg, #ff69b4, #da70d6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    #visualizer {
-      width: 300px;
-      height: 100px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
-      margin-bottom: 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      color: #666;
-    }
-
-    #mic-btn {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      border: none;
-      background: #333;
-      color: #fff;
-      font-size: 3rem;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    #mic-btn.active {
-      background: #ff69b4;
-      box-shadow: 0 0 30px rgba(255, 105, 180, 0.6);
-      transform: scale(1.1);
-    }
-
-    #mic-btn.connecting {
-      animation: pulse 1.5s infinite;
-      background: #da70d6;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.8; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    #status {
-      margin-top: 2rem;
-      font-size: 0.9rem;
-      color: #888;
-    }
-
-    #captions {
-      margin-top: 2rem;
-      padding: 1rem;
-      min-height: 3rem;
-      text-align: center;
-      font-size: 1.1rem;
-      line-height: 1.5;
-      max-width: 80%;
-      color: #fff;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 8px;
-      backdrop-filter: blur(4px);
-      transition: opacity 0.3s ease;
-    }
-    
-    #captions:empty {
-      opacity: 0;
-    }
-
-    /* PWA Install Prompt (Optional styling) */
-    .logs {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      right: 20px;
-      height: 80px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 10px;
-      color: #444;
-      pointer-events: none;
-    }
-  </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <h1>Claris Live 🌸</h1>
   
-  <div id="visualizer">
-    <!-- Simple CSS visualizer placeholder -->
-    <div style="display:flex; gap:4px; align-items:flex-end; height:30px;">
-      <div class="bar" style="width:4px; height:10px; background:#555; border-radius:2px;"></div>
-      <div class="bar" style="width:4px; height:20px; background:#555; border-radius:2px;"></div>
-      <div class="bar" style="width:4px; height:15px; background:#555; border-radius:2px;"></div>
-      <div class="bar" style="width:4px; height:25px; background:#555; border-radius:2px;"></div>
-      <div class="bar" style="width:4px; height:12px; background:#555; border-radius:2px;"></div>
+  <div id="chat-container">
+    <div id="chat-history">
+      <div class="message ai">
+        <p>こんにちは！<strong>Claris</strong>だよ🌸</p>
+        <p>お話したいこと、何かある？✨</p>
+      </div>
     </div>
   </div>
 
-  <button id="mic-btn">🎙️</button>
-  
-  <div id="status">Tap to Connect</div>
+  <form id="input-area">
+    <div id="live-indicator">
+      <div class="live-dot"></div>
+      Voice Call Active
+    </div>
+    
+    <!-- Changed to Phone Icon for "Call" metaphor -->
+    <button type="button" id="live-btn" aria-label="Toggle Voice Call">📞</button>
+    
+    <textarea id="message-input" placeholder="Message..." rows="1"></textarea>
+    
+    <button type="submit" id="send-btn">➤</button>
+  </form>
 
-  <div id="captions"></div>
+    <div id="version-display">v0.19.2</div>
 
-  <div class="logs" id="logs"></div>
+  <!-- Call Mode Overlay -->
+  <dialog id="call-overlay" class="call-overlay">
+    <div class="overlay-header">
+      <h2>Claris Live 🌸</h2>
+      <div id="status-text">Connecting...</div>
+    </div>
+    
+    <canvas id="waveform"></canvas>
 
-  <script src="/app.js"></script>
+    <div class="overlay-controls">
+      <!-- Mic Selector (Duplicated logic, synced in JS) -->
+      <div class="overlay-mic-container">
+         <select id="mic-selector-overlay" class="mic-selector overlay-selector">
+            <!-- Populated by JS -->
+         </select>
+      </div>
+
+      <button id="end-call-btn" class="end-call-btn" aria-label="End Call">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.52 7.5 6.4 12 6.4c4.5 0 8.66 2.12 11.71 5.27.18.18.29.43.29.71 0 .28-.11.53-.29.7l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+        </svg>
+      </button>
+    </div>
+  </dialog>
+
+  <div class="logs" id="logs" style="display:none;"></div>
+
+  <script type="module" src="/app.js?v=25"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 </body>
 </html>

@@ -59,7 +59,7 @@ const watchGmailSchema = z.object({
     .string()
     .optional()
     .describe(
-      'The full name of the Cloud Pub/Sub topic. Defaults to "projects/${GOOGLE_CLOUD_PROJECT}/topics/claris-events" if not specified.',
+      `The full name of the Cloud Pub/Sub topic. Defaults to "projects/\${GOOGLE_CLOUD_PROJECT}/topics/claris-events" if not specified.`,
     ),
 });
 

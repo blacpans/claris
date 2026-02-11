@@ -1,0 +1,647 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #1a1a1a;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  overflow: hidden;
+}
+
+h1 {
+  font-weight: 300;
+  letter-spacing: 2px;
+  margin-bottom: 2rem;
+  background: linear-gradient(45deg, #ff69b4, #da70d6);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Call Overlay */
+.call-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0;
+  padding: 40px 20px;
+  border: none;
+  background: transparent;
+  color: white;
+  /* display: none is default for dialog, we don't set display here */
+  /* Layout properties (will apply when display: flex is set) */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Center content vertically too, or space-between if preferred */
+  gap: 2rem;
+}
+
+.call-overlay[open] {
+  opacity: 1;
+  display: flex;
+}
+
+/* Overlay Header */
+.overlay-header {
+  text-align: center;
+  margin-top: 2rem;
+  z-index: 2;
+}
+
+.overlay-header h2 {
+  font-size: 2rem;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(45deg, #ff69b4, #da70d6);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+#status-text {
+  font-size: 1rem;
+  color: #aaa;
+  font-weight: 300;
+  animation: pulse-text 2s infinite;
+}
+
+@keyframes pulse-text {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Waveform Canvas */
+#waveform {
+  width: 100%;
+  height: 300px;
+  max-width: 800px;
+  flex: 1; /* Take available space */
+  min-height: 200px;
+}
+
+/* Overlay Controls */
+.overlay-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  width: 100%;
+  z-index: 2;
+}
+
+/* End Call Button */
+.end-call-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: #ff4b4b;
+  color: white;
+  font-size: 1.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 20px rgba(255, 75, 75, 0.5);
+  margin-top: 1rem;
+}
+
+.end-call-btn svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.end-call-btn span {
+  display: none;
+}
+
+.end-call-btn:hover {
+  background: #ff3333;
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(255, 75, 75, 0.6);
+}
+
+.end-call-btn:active {
+  transform: scale(0.95);
+}
+
+/* Overlay Mic Selector */
+.overlay-mic-container {
+  display: flex;
+  justify-content: center;
+}
+
+.mic-selector.overlay-selector {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 24px;
+  padding-right: 40px; /* Space for arrow */
+  border-radius: 30px;
+  color: #fff;
+  font-size: 1rem;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  /* Prevent truncation */
+  min-width: 320px;
+  max-width: 90vw;
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* Custom Arrow */
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.5rem center;
+  background-size: 0.8em auto;
+}
+
+.mic-selector.overlay-selector:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Option styling: Use default white background for better system integration */
+.mic-selector.overlay-selector option {
+  background-color: #fff;
+  color: #1a1a1a;
+  padding: 10px;
+}
+
+/* For Firefox/Chrome specific dropdown styling if supported */
+.mic-selector.overlay-selector:focus {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Add custom arrow indicator if needed, but simple is often better */
+
+.call-overlay::backdrop {
+  background: rgba(20, 20, 20, 0.65);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    overlay 0.3s allow-discrete,
+    display 0.3s allow-discrete;
+}
+
+.call-overlay[open]::backdrop {
+  opacity: 1;
+}
+
+/* Starting state for transition */
+@starting-style {
+  .call-overlay[open],
+  .call-overlay[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+#visualizer {
+  width: 300px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+#mic-btn {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: none;
+  background: #333;
+  color: #fff;
+  font-size: 3rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+#mic-btn.active {
+  background: #ff69b4;
+  box-shadow: 0 0 30px rgba(255, 105, 180, 0.6);
+  transform: scale(1.1);
+}
+
+#mic-btn.connecting {
+  animation: pulse 1.5s infinite;
+  background: #da70d6;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+#status {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: #888;
+}
+
+#captions {
+  margin-top: 2rem;
+  padding: 1rem;
+  min-height: 3rem;
+  text-align: center;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  max-width: 80%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  transition: opacity 0.3s ease;
+}
+
+#captions:empty {
+  opacity: 0;
+}
+
+#chat-container {
+  width: 100%;
+  max-width: 600px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 80px; /* Space for input area */
+}
+
+#chat-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.message {
+  max-width: 80%;
+  padding: 10px 15px;
+  border-radius: 15px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  animation: fadeIn 0.3s ease;
+}
+
+.message.user {
+  align-self: flex-end;
+  background: #333;
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.message.ai {
+  align-self: flex-start;
+  background: rgba(255, 105, 180, 0.2);
+  color: #ffb7e0;
+  border-bottom-left-radius: 2px;
+  border: 1px solid rgba(255, 105, 180, 0.3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#input-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 15px;
+  padding-bottom: max(15px, env(safe-area-inset-bottom));
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  gap: 12px;
+  align-items: flex-end; /* Align bottom for multiline */
+  justify-content: center;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+#live-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 25px; /* Pill shape transition? or just circle */
+  border: 1px solid #666; /* Brighter border for visibility */
+  background: #333; /* Slightly lighter than bg */
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  padding: 12px; /* Add padding for SVG */
+  box-sizing: border-box;
+}
+
+#live-btn svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  transition: transform 0.3s ease;
+}
+
+#live-btn:hover {
+  background: #444;
+  border-color: #888;
+}
+
+/* Processing/Loading State */
+#live-btn.processing {
+  background: #444;
+  border-color: #ffb7e0;
+  cursor: wait;
+  pointer-events: none;
+  animation: pulse-border 1s infinite alternate;
+}
+
+#live-btn.processing svg {
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-border {
+  from {
+    border-color: #444;
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+  to {
+    border-color: #ff69b4;
+    box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+  }
+}
+
+/* Active "Call" State */
+#live-btn.active {
+  background: #ff4b4b;
+  border-color: #ff4b4b;
+  color: white; /* Ensures SVG is white */
+  box-shadow: 0 4px 15px rgba(255, 75, 75, 0.5);
+}
+
+#live-btn.active svg {
+  /* No rotation on the SVG itself, we might change the icon? */
+}
+
+#live-btn.active:hover {
+  background: #ff3333;
+  box-shadow: 0 6px 20px rgba(255, 75, 75, 0.6);
+}
+
+@keyframes pulse-mic {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 105, 180, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 180, 0);
+  }
+}
+
+#message-input {
+  flex: 1;
+  max-width: 600px;
+  padding: 14px 20px;
+  border-radius: 24px;
+  border: 1px solid #444;
+  background: #2a2a2a;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.4;
+  outline: none;
+  transition:
+    border-color 0.3s,
+    height 0.1s;
+  resize: none; /* Disable manual resize */
+  height: 50px; /* Initial height */
+  max-height: 150px;
+  scrollbar-width: none; /* Hide scrollbar for cleaner look */
+}
+
+#message-input::-webkit-scrollbar {
+  display: none;
+}
+
+#message-input:focus {
+  border-color: #ff69b4;
+}
+
+#send-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: #ff69b4;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+#send-btn:disabled {
+  background: #444;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+#send-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Markdown Styles within messages */
+.message p {
+  margin: 0 0 0.5em 0;
+}
+.message p:last-child {
+  margin: 0;
+}
+.message strong {
+  color: #ffeb3b;
+  font-weight: 700;
+}
+.message em {
+  color: #ff80ab;
+  font-style: normal;
+} /* Highlight emphasis */
+.message ul,
+.message ol {
+  margin: 0.5em 0;
+  padding-left: 1.2em;
+}
+.message code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* Live Mode Indicator - more prominent */
+#live-indicator {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: linear-gradient(45deg, #ff69b4, #ff80ab);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+  white-space: nowrap;
+}
+
+#live-indicator.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 15px 20px;
+  background: rgba(255, 105, 180, 0.1);
+  border-radius: 15px;
+  border-bottom-left-radius: 2px;
+  width: fit-content;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background: #ffb7e0;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+#chat-container {
+  padding-bottom: 90px;
+}
+
+/* Hide old containers */
+#mic-container {
+  display: none;
+}
+
+#version-display {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.7rem;
+  font-family: monospace;
+  z-index: 100;
+}
