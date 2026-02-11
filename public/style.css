@@ -466,10 +466,6 @@ h1 {
   box-shadow: 0 4px 15px rgba(255, 75, 75, 0.5);
 }
 
-#live-btn.active svg {
-  /* No rotation on the SVG itself, we might change the icon? */
-}
-
 #live-btn.active:hover {
   background: var(--danger-hover);
   box-shadow: 0 6px 20px rgba(255, 75, 75, 0.6);
