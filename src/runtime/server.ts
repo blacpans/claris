@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
 /**
  * Hono Server - Minimal runtime for Claris
@@ -90,6 +92,21 @@ app.get('/oauth2callback', async (c) => {
   } catch (error) {
     console.error('OAuth callback error:', error);
     return c.json({ error: MESSAGES.AUTH.FAILED_PROCESS }, 500);
+  }
+});
+
+// アプリの構成情報（バージョンなど）を返す
+app.get('/api/config', (c) => {
+  try {
+    const pkgPath = join(process.cwd(), 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    return c.json({
+      version: `v${pkg.version}`,
+      wsPath: '/ws/live',
+    });
+  } catch (error) {
+    console.error('Failed to load package.json:', error);
+    return c.json({ version: 'v0.0.0', wsPath: '/ws/live' });
   }
 });
 

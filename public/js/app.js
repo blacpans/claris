@@ -1,5 +1,4 @@
 import * as Audio from './audio.js';
-import { CONFIG, getWebSocketUrl } from './config.js';
 import * as UI from './ui.js';
 import { AudioVisualizer } from './visualizer.js';
 
@@ -8,6 +7,12 @@ let ws = null;
 let isConnected = false;
 let shouldReconnect = false;
 let currentUserId = null;
+let config = { version: 'v0.19.2', wsPath: '/ws/live' };
+
+function getWebSocketUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}${config.wsPath}`;
+}
 
 // Start visualizer loop or similar logic
 let isSpeaking = false;
@@ -40,14 +45,28 @@ if (UI.loginButton) {
   });
 }
 
-// Initial Auth Check
-checkAuth();
+// Initial Setup
+async function init() {
+  // Fetch Config
+  try {
+    const res = await fetch('/api/config');
+    if (res.ok) {
+      config = await res.json();
+    }
+  } catch (err) {
+    console.warn('Failed to fetch config, using defaults:', err);
+  }
 
-console.log(`🌸 Claris Client ${CONFIG.CLIENT_VERSION}`);
+  // Display Version
+  const versionEl = document.getElementById('version-display');
+  if (versionEl) versionEl.textContent = config.version;
+  console.log(`🌸 Claris Client ${config.version}`);
 
-// Display Version
-const versionEl = document.getElementById('version-display');
-if (versionEl) versionEl.textContent = CONFIG.CLIENT_VERSION;
+  // Auth Check
+  await checkAuth();
+}
+
+init();
 
 // Textarea Auto-resize
 if (UI.messageInput) {

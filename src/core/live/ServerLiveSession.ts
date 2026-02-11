@@ -46,6 +46,7 @@ export class ServerLiveSession extends EventEmitter {
   private client: GoogleGenAI;
   // using unknown to avoid 'any' for internal SDK session type
   private session: unknown = null;
+  private sessionService: FirestoreSessionService;
   private memoryService: MemoryService;
   private currentSessionId: string | null = null;
   private currentUserId: string = 'anonymous';
@@ -87,7 +88,8 @@ export class ServerLiveSession extends EventEmitter {
     const config = generateLiveSessionConfig(process.env.CLARIS_NAME || 'Claris', memory);
 
     try {
-      this.session = await this.client.live.connect({
+      // biome-ignore lint/suspicious/noExplicitAny: SDK types for Live API are currently incomplete
+      this.session = await (this.client as any).live.connect({
         model: model,
         config: config,
         callbacks: {

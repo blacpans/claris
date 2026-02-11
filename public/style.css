@@ -6,6 +6,7 @@
   --text-color: #fff;
   --text-muted: #aaa;
   --border-color: #444;
+  --link-color: #ff69b4;
   --primary-color: #ff69b4;
   --primary-gradient-start: #ff69b4;
   --primary-gradient-end: #da70d6;
@@ -698,9 +699,10 @@ h1 {
 }
 
 .login-card p {
-  color: var(--text-secondary);
+  color: var(--text-color);
   margin-bottom: 2rem;
   line-height: 1.6;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .btn-primary {

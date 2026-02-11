@@ -1,7 +1,6 @@
 import { type Auth, google } from 'googleapis';
 import { getCredentialStore, type SavedCredentials } from './store.js';
 
-// Main account scopes (Drive, Photos, etc.)
 const DEFAULT_SCOPES = [
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -12,6 +11,9 @@ const DEFAULT_SCOPES = [
   'https://www.googleapis.com/auth/photoslibrary.readonly', // Photos
   'https://www.googleapis.com/auth/contacts.readonly', // People (Contacts)
   'https://www.googleapis.com/auth/user.birthday.read', // People (Birthdays)
+  'https://www.googleapis.com/auth/userinfo.email', // Identity (Email)
+  'https://www.googleapis.com/auth/userinfo.profile', // Identity (Profile)
+  'openid', // OpenID Connect
 ];
 
 // YouTube account scopes (Brand Account)
@@ -202,16 +204,50 @@ export async function handleAuthCallback(code: string, state?: string): Promise<
     await saveCredentials(client, profile);
 
     // ユーザー情報を取得
-    const oauth2 = google.oauth2({ version: 'v2', auth: client });
-    const userInfo = await oauth2.userinfo.get();
+    let email: string | undefined;
 
-    if (!userInfo.data.email) {
-      throw new Error('Failed to get email from Google');
+    try {
+      const oauth2 = google.oauth2({ version: 'v2', auth: client });
+      const userInfo = await oauth2.userinfo.get();
+      email = userInfo.data.email ?? undefined;
+    } catch (userInfoError) {
+      console.warn('⚠️ userinfo.get() failed, trying to decode id_token:', userInfoError);
+
+      // バックアップ: IDトークンからデコードを試みる
+      const idToken = tokens.id_token;
+      if (idToken) {
+        try {
+          const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+          });
+          email = ticket.getPayload()?.email;
+        } catch (verifyError) {
+          console.error('❌ Failed to verify id_token:', verifyError);
+        }
+      }
     }
 
-    return { email: userInfo.data.email };
+    if (!email) {
+      throw new Error('Failed to get email from Google (Userinfo failed and ID token invalid/missing)');
+    }
+
+    return { email };
   } catch (error) {
-    console.error('Failed to exchange code for tokens:', error);
+    if (error instanceof Error) {
+      const details =
+        typeof error === 'object' && error !== null && 'response' in error
+          ? (error as { response?: { data?: unknown } }).response?.data
+          : 'No extra details';
+
+      console.error('❌ Failed to complete authentication process:', {
+        message: error.message,
+        stack: error.stack,
+        details,
+      });
+    } else {
+      console.error('❌ Failed to complete authentication process (non-Error):', error);
+    }
     throw new Error('Failed to complete authentication process');
   }
 }
