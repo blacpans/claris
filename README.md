@@ -82,29 +82,44 @@ cp .env.example .env
 npm run dev
 ```
 
-## Environment Variables
 
-| Variable | Description | Default (if applicable) |
-|----------|-------------|-------------------------|
-| `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID | |
-| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (General) | `us-central1` |
-| `GEMINI_MODEL` | Gemini Model Name (Chat) | `gemini-1.5-pro` |
-| `FIRESTORE_COLLECTION` | Firestore collection for session storage | `claris-sessions` |
-| `GITHUB_TOKEN` | GitHub Personal Access Token (for PR operations) | |
-| `GITHUB_WEBHOOK_SECRET` | Secret for GitHub Webhook verification | |
-| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Client Secret | |
-| `GOOGLE_REDIRECT_URI` | Google OAuth 2.0 Redirect URI | |
-| `AUTH_SECRET` | Secret to protect `/auth/google` and session state | |
-| `TZ` | Timezone | `Asia/Tokyo` |
-| `PORT` | Server port | `8080` |
-| `CLARIS_NAME` | Agent Name | `Claris` |
-| `GEMINI_LIVE_MODEL` | Gemini Model for Live Session (Audio) | `gemini-live-2.5-flash-native-audio` |
-| `GEMINI_LIVE_LOCATION` | Vertex AI Location for Live Session | `us-central1` |
+### Gemini Models 🧠
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GEMINI_LIVE_MODEL` | Live API Model | `gemini-live-2.5-flash-native-audio` |
+| `GEMINI_LIVE_LOCATION` | Vertex AI Location for Live | `us-central1` |
+| `GEMINI_FLASH_MODEL` | Flash Model (Cheap/Fast) | `gemini-3-flash-preview` |
+| `GEMINI_PRO_MODEL` | Pro Model (High Reasoning) | `gemini-3-pro-preview` |
+| `VOICEVOX_GEMINI_MODEL` | Gemini Model for TTS | `gemini-2.0-flash-exp` |
 | `GEMINI_API_VERSION` | Gemini API Version | `v1beta1` |
-| `VOICEVOX_GEMINI_MODEL` | Model for TTS generation via Gemini | `gemini-2.0-flash-exp` |
-| `RELAY_PORT` | Port for Relay Server (Sensory Interface) | `3000` |
-| `SUMMARY_TIMEOUT_MS` | Timeout for summary generation (ms) | `10000` |
+
+### General Configuration ⚙️
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID | - |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location | `global` |
+| `FIRESTORE_COLLECTION` | Firestore Collection | `claris-sessions` |
+| `TZ` | Timezone | `Asia/Tokyo` |
+| `PORT` | Server Port | `8080` |
+| `CLARIS_NAME` | Agent Name | `Claris` |
+| `SUMMARY_TIMEOUT_MS` | Summary Timeout (ms) | `10000` |
+
+### Service Integrations 🔌
+
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_TOKEN` | GitHub Personal Access Token |
+| `GITHUB_WEBHOOK_SECRET` | GitHub Webhook Secret |
+| `GOOGLE_CLIENT_ID` | OAuth Client ID |
+| `GOOGLE_CLIENT_SECRET` | OAuth Client Secret |
+| `GOOGLE_REDIRECT_URI` | OAuth Redirect URI |
+| `AUTH_SECRET` | Auth State Secret |
+| `GOOGLE_MAPS_API_KEY` | Google Maps API Key |
+| `VERTEX_SEARCH_DATA_STORE_ID` | Vertex Search Store ID |
+| `VERTEX_SEARCH_SERVING_CONFIG`| Vertex Search Config |
+| `RELAY_PORT` | Relay Server Port |
 
 ## Firestore & Vector Search Setup 🔥
 

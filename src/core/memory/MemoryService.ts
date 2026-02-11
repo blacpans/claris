@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { FieldValue, Firestore } from '@google-cloud/firestore';
+import { getEmbeddingModel, getSummarizationLocation, getSummarizationModel } from '@/config/models.js';
 
 export interface Memory {
   id?: string;
@@ -21,8 +22,8 @@ export class MemoryService {
   private db: Firestore;
   private genAI: GoogleGenAI;
   private collectionName = 'claris-memories';
-  private model = 'gemini-1.5-flash-001'; // For summarization
-  private embeddingModel = 'text-embedding-004';
+  private model = getSummarizationModel(); // For summarization
+  private embeddingModel = getEmbeddingModel();
 
   // Output dimension for text-embedding-004
   public readonly EMBEDDING_DIMENSION = 768;
@@ -34,7 +35,7 @@ export class MemoryService {
       genAI ||
       new GoogleGenAI({
         project: process.env.GOOGLE_CLOUD_PROJECT,
-        location: process.env.GEMINI_LIVE_LOCATION || 'us-central1',
+        location: getSummarizationLocation(),
         vertexai: true,
         apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
       });

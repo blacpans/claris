@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { DEFAULT_STYLES, type ThinkingStyle } from './defaults.js';
+import { GEMINI_MODELS } from './models.js';
 
 /**
  * Navi Customizer Configuration
@@ -56,7 +57,7 @@ export function getModelName(rapid: ClarisConfig['rapid']): string {
   if (process.env.GEMINI_MODEL) {
     return process.env.GEMINI_MODEL;
   }
-  return rapid === 'pro' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+  return rapid === 'pro' ? GEMINI_MODELS.GENERATE.PRO : GEMINI_MODELS.GENERATE.FLASH;
 }
 
 /**

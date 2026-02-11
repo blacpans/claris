@@ -2,6 +2,7 @@ import { GoogleGenAI, type Part } from '@google/genai';
 import { generateLiveSessionConfig } from '@/agents/prompts.js';
 import '@/config/env.js';
 import { EventEmitter } from 'node:events';
+import { getLiveModel } from '@/config/models.js';
 import { MemoryService } from '@/core/memory/MemoryService.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
 
@@ -78,7 +79,7 @@ export class ServerLiveSession extends EventEmitter {
       this.currentSessionId = `session-${Date.now()}`;
     }
 
-    const model = process.env.GEMINI_LIVE_MODEL || 'gemini-live-2.5-flash-native-audio';
+    const model = getLiveModel();
     console.log(`🔌 Connecting to Gemini (${model}) for Server Session...`);
 
     // Load Memory
