@@ -52,7 +52,7 @@ export async function getAudioDevices() {
   return audioInputs;
 }
 
-export async function startMicrophone(ws, deviceId = null) {
+export async function startMicrophone(onAudioData, deviceId = null) {
   try {
     if (inputSource) {
       inputSource.disconnect();
@@ -107,8 +107,8 @@ export async function startMicrophone(ws, deviceId = null) {
       }
 
       if (e.data.type === 'audio') {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(e.data.data);
+        if (onAudioData) {
+          onAudioData(e.data.data);
         }
 
         const rms = e.data.rms;

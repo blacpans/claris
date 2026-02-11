@@ -135,8 +135,13 @@ async function startConnection() {
           if (UI.statusEl) UI.statusEl.textContent = 'Connected (Listening)';
           isConnected = true;
 
+          // @ts-expect-error
           try {
-            await Audio.startMicrophone(ws, selectedMicId);
+            await Audio.startMicrophone((data) => {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(data);
+              }
+            }, selectedMicId);
 
             // Start Visualizer
             const analyser = Audio.getAnalyser();
@@ -333,7 +338,11 @@ function handleMicChange(e) {
 
   // If currently connected, restart mic
   if (isConnected && ws) {
-    Audio.startMicrophone(ws, selectedMicId).catch((err) => UI.log(`Failed to switch mic: ${err}`));
+    Audio.startMicrophone((data) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(data);
+      }
+    }, selectedMicId).catch((err) => UI.log(`Failed to switch mic: ${err}`));
   }
 }
 

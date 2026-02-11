@@ -259,6 +259,7 @@ export class ServerLiveSession extends EventEmitter {
     console.log('📝 Disconnecting session...');
     this.stop();
     /*
+    // TODO: Stable summarization logic to be re-enabled
     try {
        // ... (Summary disabled to prevent crash)
     } 
