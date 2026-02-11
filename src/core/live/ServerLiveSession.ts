@@ -2,6 +2,7 @@ import { GoogleGenAI, type Part } from '@google/genai';
 import { generateLiveSessionConfig } from '@/agents/prompts.js';
 import '@/config/env.js';
 import { EventEmitter } from 'node:events';
+import { getLiveModel } from '@/config/models.js';
 import { MemoryService } from '@/core/memory/MemoryService.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
 
@@ -22,8 +23,11 @@ interface LiveServerMessage {
     };
     interrupted?: boolean;
     turnComplete?: boolean;
+    inputTranscription?: {
+      text?: string;
+      finished?: boolean;
+    };
   };
-  turnComplete?: boolean;
 }
 
 // Local interface for stored events to ensure type safety
@@ -46,6 +50,8 @@ export class ServerLiveSession extends EventEmitter {
   private sessionService: FirestoreSessionService;
   private memoryService: MemoryService;
   private currentSessionId: string | null = null;
+  private currentUserId: string = 'anonymous';
+  private eventsBuffer: StoredEvent[] = [];
 
   // Audio Buffer for connection phase
   private audioQueue: Buffer[] = [];
@@ -65,12 +71,15 @@ export class ServerLiveSession extends EventEmitter {
   }
 
   async start(userId = 'anonymous') {
+    this.currentUserId = userId;
+    this.eventsBuffer = []; // Reset buffer for new session
+
     // Generate session ID if not exists (for this run)
     if (!this.currentSessionId) {
       this.currentSessionId = `session-${Date.now()}`;
     }
 
-    const model = process.env.GEMINI_LIVE_MODEL || 'gemini-live-2.5-flash-native-audio';
+    const model = getLiveModel();
     console.log(`🔌 Connecting to Gemini (${model}) for Server Session...`);
 
     // Load Memory
@@ -80,7 +89,8 @@ export class ServerLiveSession extends EventEmitter {
     const config = generateLiveSessionConfig(process.env.CLARIS_NAME || 'Claris', memory);
 
     try {
-      this.session = await this.client.live.connect({
+      // biome-ignore lint/suspicious/noExplicitAny: SDK types for Live API are currently incomplete
+      this.session = await (this.client as any).live.connect({
         model: model,
         config: config,
         callbacks: {
@@ -246,6 +256,36 @@ export class ServerLiveSession extends EventEmitter {
       console.log('🛑 Interrupted');
       this.emit('interrupted');
     }
+
+    // ユーザー発言の記録
+    if (message.serverContent?.inputTranscription?.text) {
+      const text = message.serverContent.inputTranscription.text;
+      // 重複記録を避けるため、最後のイベントが同じテキストの user-message でないかチェック
+      const lastEvent = this.eventsBuffer[this.eventsBuffer.length - 1];
+      if (!lastEvent || lastEvent.type !== 'user-message' || lastEvent.text !== text) {
+        this.eventsBuffer.push({
+          type: 'user-message',
+          text,
+          timestamp: Date.now(),
+        });
+      }
+    }
+
+    // モデル発言の記録
+    if (message.serverContent?.modelTurn?.parts) {
+      const modelText = message.serverContent.modelTurn.parts
+        .map((p) => p.text)
+        .filter(Boolean)
+        .join('');
+
+      if (modelText) {
+        this.eventsBuffer.push({
+          type: 'model-response',
+          text: modelText,
+          timestamp: Date.now(),
+        });
+      }
+    }
   }
 
   /**
@@ -257,13 +297,36 @@ export class ServerLiveSession extends EventEmitter {
     if (!this.session) return;
 
     console.log('📝 Disconnecting session...');
-    this.stop();
-    /*
-    // TODO: Stable summarization logic to be re-enabled
+
     try {
-       // ... (Summary disabled to prevent crash)
-    } 
-    */
+      if (this.eventsBuffer.length > 0 && this.currentSessionId) {
+        // 1. 会話履歴の保存（短期記憶）
+        console.log(`💾 Saving ${this.eventsBuffer.length} events to Firestore...`);
+        const session = {
+          id: this.currentSessionId,
+          appName: process.env.CLARIS_NAME || 'Claris',
+          userId: this.currentUserId,
+          state: {},
+          events: [],
+          lastUpdateTime: Date.now(),
+        };
+        await this.sessionService.appendEvents({ session, events: this.eventsBuffer });
+
+        // 2. 要約の生成と保存（長期記憶）
+        const fullText = this.eventsBuffer
+          .map((e) => (e.type === 'user-message' ? `User: ${e.text}` : `Claris: ${e.text}`))
+          .join('\n');
+
+        if (fullText.length > 50) {
+          console.log('🧠 Generating session summary...');
+          await this.memoryService.addMemory(this.currentUserId, this.currentSessionId, fullText);
+        }
+      }
+    } catch (e) {
+      console.error('❌ Failed to save session data:', e);
+    }
+
+    this.stop();
   }
 
   stop() {

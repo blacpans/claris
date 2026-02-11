@@ -5,7 +5,7 @@
  * She's cheerful, supportive, and loves to help with code reviews and Git operations.
  */
 import { Gemini, LlmAgent } from '@google/adk';
-import { getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
+import { getGenerationLocation, getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
 import {
   addTask,
   appendToSheet,
@@ -51,10 +51,26 @@ export async function createClarisAgent(context?: ClarisContext) {
     model: modelName,
     vertexai: true,
     project: process.env.GOOGLE_CLOUD_PROJECT,
-    location: process.env.GOOGLE_CLOUD_LOCATION,
+    location: getGenerationLocation(),
   });
 
   let instruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);
+
+  // 🕐 現在日時の注入: モデルが「今日」を正しく認識するために必須
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+    timeZone: process.env.TZ || 'Asia/Tokyo',
+  });
+  const timeStr = now.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: process.env.TZ || 'Asia/Tokyo',
+  });
+  instruction += `\n\n## 現在の日時\n現在は ${dateStr} ${timeStr} です。ユーザーからの質問には、この日時を基準に回答してください。`;
 
   // 🦀 Soul Unison: Apply Thinking Style based on active file or preference 🐳
   if (context?.activeFile || config.preferredStyle) {

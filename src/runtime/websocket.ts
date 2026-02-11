@@ -5,8 +5,13 @@ import { ServerLiveSession } from '@/core/live/ServerLiveSession.js';
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ server, path: '/ws/live' });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', (ws: WebSocket, req) => {
     console.log('📱 Client connected to WebSocket');
+
+    // クエリパラメータから userId を取得
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const userId = url.searchParams.get('userId') || 'anonymous';
+    console.log(`👤 Connected user: ${userId}`);
 
     const liveSession = new ServerLiveSession();
     let isSessionStarted = false;
@@ -20,9 +25,7 @@ export function setupWebSocket(server: Server) {
           console.log('🎤 First audio chunk received, starting session...');
 
           // Start in background - DO NOT AWAIT!
-          // Awaiting here would cause this first chunk to be sent AFTER subsequent chunks
-          // which are buffered by sendAudio while this awaits.
-          liveSession.start().catch((err) => {
+          liveSession.start(userId).catch((err) => {
             console.error('Failed to start session:', err);
             isSessionStarted = false; // Reset on failure
           });

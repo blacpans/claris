@@ -6,6 +6,8 @@ export const chatHistory = document.getElementById('chat-history');
 export const liveBtn = document.getElementById('live-btn');
 export const sendBtn = document.getElementById('send-btn');
 export const liveIndicator = document.getElementById('live-indicator');
+export const loginOverlay = document.getElementById('login-overlay');
+export const loginButton = document.getElementById('login-button');
 
 let loadingDiv = null;
 

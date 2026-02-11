@@ -161,8 +161,26 @@ export const STYLE_PROMPTS = {
 export function generateLiveSessionConfig(agentName: string, memory: string) {
   const baseInstruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);
 
+  // 🕐 現在日時の注入
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+    timeZone: process.env.TZ || 'Asia/Tokyo',
+  });
+  const timeStr = now.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: process.env.TZ || 'Asia/Tokyo',
+  });
+
   const text = `Language: Japanese (Always speak in Japanese)
 ${baseInstruction}
+
+## 現在の日時
+現在は ${dateStr} ${timeStr} です。
 
 NOTE: You are in "Live Mode". Speak conversationally and keep responses short.
 

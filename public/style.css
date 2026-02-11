@@ -6,6 +6,7 @@
   --text-color: #fff;
   --text-muted: #aaa;
   --border-color: #444;
+  --link-color: #4fc3f7;
   --primary-color: #ff69b4;
   --primary-gradient-start: #ff69b4;
   --primary-gradient-end: #da70d6;
@@ -564,6 +565,18 @@ h1 {
   font-family: var(--font-family-mono);
   font-size: 0.9em;
 }
+.message a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition:
+    color 0.2s,
+    opacity 0.2s;
+}
+.message a:hover {
+  color: #81d4fa;
+  opacity: 0.9;
+}
 
 /* Live Mode Indicator - more prominent */
 #live-indicator {
@@ -662,4 +675,70 @@ h1 {
   font-size: 0.7rem;
   font-family: var(--font-family-mono);
   z-index: 100;
+}
+
+/* Login Dialog */
+.login-dialog {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 400px;
+  width: 90%;
+  z-index: 10000;
+}
+
+.login-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3rem;
+  border-radius: 2rem;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.login-card h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-card p {
+  color: var(--text-color);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #ff6b6b 100%);
+  color: white;
+  padding: 1.2rem 2rem;
+  font-size: 1.4rem;
+  font-weight: bold;
+  border-radius: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 25px rgba(255, 71, 87, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
 }
