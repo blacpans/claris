@@ -46,6 +46,6 @@ export function getSummarizationModel(): string {
 /**
  * Get the generation/summarization location.
  */
-export function getSummarizationLocation(): string {
+export function getGenerationLocation(): string {
   return process.env.GEMINI_GENERATE_LOCATION || process.env.GOOGLE_CLOUD_LOCATION || 'global';
 }

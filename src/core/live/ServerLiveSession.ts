@@ -302,7 +302,15 @@ export class ServerLiveSession extends EventEmitter {
       if (this.eventsBuffer.length > 0 && this.currentSessionId) {
         // 1. 会話履歴の保存（短期記憶）
         console.log(`💾 Saving ${this.eventsBuffer.length} events to Firestore...`);
-        await this.sessionService.appendEvents(this.currentSessionId, this.eventsBuffer);
+        const session = {
+          id: this.currentSessionId,
+          appName: process.env.CLARIS_NAME || 'Claris',
+          userId: this.currentUserId,
+          state: {},
+          events: [],
+          lastUpdateTime: Date.now(),
+        };
+        await this.sessionService.appendEvents({ session, events: this.eventsBuffer });
 
         // 2. 要約の生成と保存（長期記憶）
         const fullText = this.eventsBuffer

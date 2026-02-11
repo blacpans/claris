@@ -5,7 +5,7 @@
  * She's cheerful, supportive, and loves to help with code reviews and Git operations.
  */
 import { Gemini, LlmAgent } from '@google/adk';
-import { getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
+import { getGenerationLocation, getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
 import {
   addTask,
   appendToSheet,
@@ -51,7 +51,7 @@ export async function createClarisAgent(context?: ClarisContext) {
     model: modelName,
     vertexai: true,
     project: process.env.GOOGLE_CLOUD_PROJECT,
-    location: process.env.GOOGLE_CLOUD_LOCATION,
+    location: getGenerationLocation(),
   });
 
   let instruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);

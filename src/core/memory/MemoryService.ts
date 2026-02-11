@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { FieldValue, Firestore } from '@google-cloud/firestore';
-import { getEmbeddingModel, getSummarizationLocation, getSummarizationModel } from '@/config/models.js';
+import { getEmbeddingModel, getGenerationLocation, getSummarizationModel } from '@/config/models.js';
 
 export interface Memory {
   id?: string;
@@ -35,7 +35,7 @@ export class MemoryService {
       genAI ||
       new GoogleGenAI({
         project: process.env.GOOGLE_CLOUD_PROJECT,
-        location: getSummarizationLocation(),
+        location: getGenerationLocation(),
         vertexai: true,
         apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
       });
