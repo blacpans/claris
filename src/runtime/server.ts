@@ -4,6 +4,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
  */
 import { Hono } from 'hono';
 import { MESSAGES } from '@/constants/messages.js';
+import { logout as clearSession, getSession, setSession } from '@/core/auth/SessionManager.js';
 import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
@@ -23,9 +24,9 @@ app.get('/health', (c) => {
 });
 
 // Google OAuth: 認証開始エンドポイント
-app.get('/auth/google', async (c) => {
+app.get('/api/auth/login', async (c) => {
   try {
-    const secret = c.req.query('secret');
+    const secret = c.req.query('secret') || process.env.AUTH_SECRET; // secretがない場合はデフォルトを使用
     const profile = c.req.query('profile'); // プロファイル名を取得
 
     if (secret !== process.env.AUTH_SECRET) {
@@ -38,6 +39,9 @@ app.get('/auth/google', async (c) => {
     return c.json({ error: MESSAGES.AUTH.FAILED_GENERATE_URL }, 500);
   }
 });
+
+// 旧エンドポイントのリダイレクト（互換性のため）
+app.get('/auth/google', (c) => c.redirect('/api/auth/login'));
 
 // Google OAuth: コールバックエンドポイント
 app.get('/oauth2callback', async (c) => {
@@ -70,7 +74,11 @@ app.get('/oauth2callback', async (c) => {
       return c.json({ error: MESSAGES.AUTH.INVALID_STATE }, 401);
     }
 
-    await handleAuthCallback(code, state);
+    const { email } = await handleAuthCallback(code, state);
+
+    // セッションを保存
+    await setSession(c, email);
+
     return c.html(
       MESSAGES.AUTH.SUCCESS_HTML(
         MESSAGES.AUTH.SUCCESS_TITLE,
@@ -83,6 +91,21 @@ app.get('/oauth2callback', async (c) => {
     console.error('OAuth callback error:', error);
     return c.json({ error: MESSAGES.AUTH.FAILED_PROCESS }, 500);
   }
+});
+
+// ログイン中のユーザー情報を取得
+app.get('/api/auth/me', async (c) => {
+  const userId = await getSession(c);
+  if (!userId) {
+    return c.json({ authenticated: false }, 401);
+  }
+  return c.json({ authenticated: true, userId });
+});
+
+// ログアウト
+app.get('/api/auth/logout', (c) => {
+  clearSession(c);
+  return c.json({ success: true });
 });
 
 // Chat endpoint (for testing)

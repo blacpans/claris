@@ -179,8 +179,9 @@ export async function getAuthUrl(state?: string, profile?: string): Promise<stri
  * 認証コールバックを処理する（サーバーサイドフロー用）
  * @param code - Google から返ってきた認証コード
  * @param state - Google から返ってきた state パラメータ (profile 情報含む)
+ * @returns 認証されたユーザーのメールアドレス
  */
-export async function handleAuthCallback(code: string, state?: string): Promise<void> {
+export async function handleAuthCallback(code: string, state?: string): Promise<{ email: string }> {
   try {
     let profile: string | undefined;
 
@@ -199,6 +200,16 @@ export async function handleAuthCallback(code: string, state?: string): Promise<
     const { tokens } = await client.getToken(code);
     client.setCredentials(tokens);
     await saveCredentials(client, profile);
+
+    // ユーザー情報を取得
+    const oauth2 = google.oauth2({ version: 'v2', auth: client });
+    const userInfo = await oauth2.userinfo.get();
+
+    if (!userInfo.data.email) {
+      throw new Error('Failed to get email from Google');
+    }
+
+    return { email: userInfo.data.email };
   } catch (error) {
     console.error('Failed to exchange code for tokens:', error);
     throw new Error('Failed to complete authentication process');

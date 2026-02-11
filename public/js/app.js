@@ -7,12 +7,42 @@ import { AudioVisualizer } from './visualizer.js';
 let ws = null;
 let isConnected = false;
 let shouldReconnect = false;
+let currentUserId = null;
 
 // Start visualizer loop or similar logic
 let isSpeaking = false;
 
-// Generate a random User ID for this session
-const userId = `web-${Math.random().toString(36).substring(2, 11)}`;
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.authenticated) {
+        currentUserId = data.userId;
+        if (UI.loginOverlay.open) UI.loginOverlay.close();
+        console.log(`🌸 Logged in as: ${currentUserId}`);
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error('Auth check failed:', err);
+  }
+
+  // Not authenticated
+  if (!UI.loginOverlay.open) UI.loginOverlay.showModal();
+  return false;
+}
+
+// Bind Login Button
+if (UI.loginButton) {
+  UI.loginButton.addEventListener('click', () => {
+    window.location.href = '/api/auth/login';
+  });
+}
+
+// Initial Auth Check
+checkAuth();
+
 console.log(`🌸 Claris Client ${CONFIG.CLIENT_VERSION}`);
 
 // Display Version
@@ -57,7 +87,7 @@ if (UI.inputArea) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: userId,
+          userId: currentUserId || 'anonymous',
           message: text,
         }),
       });
@@ -126,8 +156,11 @@ async function startConnection() {
         await Audio.initAudioContext();
 
         const wsUrl = getWebSocketUrl();
-
-        ws = new WebSocket(wsUrl);
+        const socketUrl = new URL(wsUrl);
+        if (currentUserId) {
+          socketUrl.searchParams.set('userId', currentUserId);
+        }
+        ws = new WebSocket(socketUrl.toString());
         ws.binaryType = 'arraybuffer';
 
         ws.onopen = async () => {
