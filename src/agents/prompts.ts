@@ -153,3 +153,33 @@ export const STYLE_PROMPTS = {
 - エラーハンドリングを徹底し、予測可能なクラッシュ防ぐ実装を提案する。
 `.trim(),
 } as const;
+
+/**
+ * Generates the full configuration for the Live Mode session.
+ * Includes System Instruction (with memory) and Voice Settings.
+ */
+export function generateLiveSessionConfig(agentName: string, memory: string) {
+  const baseInstruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);
+
+  const text = `Language: Japanese (Always speak in Japanese)
+${baseInstruction}
+
+NOTE: You are in "Live Mode". Speak conversationally and keep responses short.
+
+## Memory (Past Conversations)
+${memory}`;
+
+  return {
+    responseModalities: ['AUDIO'],
+    systemInstruction: {
+      parts: [{ text }],
+    },
+    speechConfig: {
+      voiceConfig: {
+        prebuiltVoiceConfig: {
+          voiceName: process.env.CLARIS_VOICE || 'Aoede',
+        },
+      },
+    },
+  };
+}
