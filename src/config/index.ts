@@ -3,6 +3,8 @@ import path from 'node:path';
 import { DEFAULT_STYLES, type ThinkingStyle } from './defaults.js';
 import { GEMINI_MODELS } from './models.js';
 
+export * from './models.js';
+
 /**
  * Navi Customizer Configuration
  */
