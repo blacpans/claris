@@ -12,7 +12,6 @@ export function getAnalyser() {
 }
 
 // Configs
-const SAMPLE_RATE_IN = 16000;
 const SAMPLE_RATE_OUT = 24000;
 
 export function getAudioContext() {
@@ -75,7 +74,15 @@ export async function startMicrophone(ws, deviceId = null) {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     inputSource = audioContext.createMediaStreamSource(stream);
-    processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+    // Load AudioWorklet Processor
+    try {
+      await audioContext.audioWorklet.addModule('./js/audio-processor.js');
+    } catch (e) {
+      throw new Error(`Failed to load audio processor: ${e.message}`);
+    }
+
+    processor = new AudioWorkletNode(audioContext, 'audio-processor');
 
     if (analyser) {
       inputSource.connect(analyser);
@@ -88,38 +95,28 @@ export async function startMicrophone(ws, deviceId = null) {
     const tracks = stream.getAudioTracks();
     if (tracks.length > 0) {
       const track = tracks[0];
-      // const settings = track.getSettings();
       log(`🎤 Active Mic: ${track.label || 'Hidden Label (Check Permissions)'}`);
-      // log(`🎤 Mic Settings: ${JSON.stringify(settings)}`);
     } else {
       log('⚠️ No Audio Tracks Found on Stream!');
     }
 
-    processor.onaudioprocess = (e) => {
+    processor.port.onmessage = (e) => {
       // Software Mute if AI is speaking (plus 600ms tail)
       if (audioContext && nextStartTime && audioContext.currentTime < nextStartTime + 0.6) {
         return;
       }
 
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        const inputData = e.inputBuffer.getChannelData(0);
-
-        // Debug Input Level (RMS)
-        let sum = 0;
-        for (let i = 0; i < inputData.length; i++) {
-          sum += inputData[i] * inputData[i];
+      if (e.data.type === 'audio') {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(e.data.data);
         }
-        const rms = Math.sqrt(sum / inputData.length);
+
+        const rms = e.data.rms;
         if (Math.random() < 0.05) {
-          // Log occasionally (approx every 1-2 sec)
-          // Only log level if it's NOT zero, or very occasionally if it is zero
           if (rms > 0.0001 || Math.random() < 0.1) {
             log(`🎤 Mic Level: ${rms.toFixed(4)}`);
           }
         }
-
-        const downsampled = downsampleBuffer(inputData, audioContext.sampleRate, SAMPLE_RATE_IN);
-        ws.send(convertFloat32ToInt16(downsampled));
       }
     };
 
@@ -185,34 +182,4 @@ export function checkPlaybackState(isConnected, onSpeakingStateChange) {
   const isPlaying = isPlayingTime || activeSources.length > 0;
 
   onSpeakingStateChange(isPlaying);
-}
-
-// Helpers
-function downsampleBuffer(buffer, sampleRate, outSampleRate) {
-  if (outSampleRate === sampleRate) return buffer;
-  const ratio = sampleRate / outSampleRate;
-  const newLength = Math.round(buffer.length / ratio);
-  const result = new Float32Array(newLength);
-
-  for (let i = 0; i < newLength; i++) {
-    const originalPos = i * ratio;
-    const index = Math.floor(originalPos);
-    const decimal = originalPos - index;
-
-    const y0 = buffer[index] || 0;
-    const y1 = buffer[index + 1] || y0;
-
-    result[i] = y0 + (y1 - y0) * decimal;
-  }
-  return result;
-}
-
-function convertFloat32ToInt16(buffer) {
-  let l = buffer.length;
-  const buf = new Int16Array(l);
-  while (l--) {
-    const s = Math.max(-1, Math.min(1, buffer[l]));
-    buf[l] = s < 0 ? s * 0x8000 : s * 0x7fff;
-  }
-  return buf.buffer;
 }
