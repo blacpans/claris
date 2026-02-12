@@ -7,6 +7,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { MESSAGES } from '@/constants/messages.js';
 import { logout as clearSession, getSession, setSession } from '@/core/auth/SessionManager.js';
+import { notificationService } from '@/core/proactive/index.js';
 import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
@@ -157,6 +158,63 @@ app.post('/chat', async (c) => {
   } catch (error) {
     console.error('Chat error:', error);
     return c.json({ error: MESSAGES.SERVER.INTERNAL_ERROR }, 500);
+  }
+});
+
+// --- Push Notification API ---
+
+// VAPID 公開鍵を返す
+app.get('/api/push/vapid-key', (c) => {
+  const pushService = notificationService.getPushService();
+  const key = pushService.getPublicKey();
+  if (!key) {
+    return c.json({ error: 'VAPID keys not configured' }, 503);
+  }
+  return c.json({ publicKey: key });
+});
+
+// Push サブスクリプションを登録する
+app.post('/api/push/subscribe', async (c) => {
+  try {
+    const body = await c.req.json<{
+      userId: string;
+      subscription: {
+        endpoint: string;
+        keys: { p256dh: string; auth: string };
+      };
+    }>();
+
+    if (!body.userId || !body.subscription?.endpoint) {
+      return c.json({ error: 'Missing userId or subscription' }, 400);
+    }
+
+    const pushService = notificationService.getPushService();
+    await pushService.saveSubscription(body.userId, body.subscription);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Push subscribe error:', error);
+    return c.json({ error: 'Failed to save subscription' }, 500);
+  }
+});
+
+// Push サブスクリプションを解除する
+app.delete('/api/push/subscribe', async (c) => {
+  try {
+    const body = await c.req.json<{
+      userId: string;
+      endpoint: string;
+    }>();
+
+    if (!body.userId || !body.endpoint) {
+      return c.json({ error: 'Missing userId or endpoint' }, 400);
+    }
+
+    const pushService = notificationService.getPushService();
+    await pushService.removeSubscription(body.userId, body.endpoint);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Push unsubscribe error:', error);
+    return c.json({ error: 'Failed to remove subscription' }, 500);
   }
 });
 

@@ -64,7 +64,81 @@ async function init() {
   console.log(`🌸 Claris Client ${config.version}`);
 
   // Auth Check
-  await checkAuth();
+  const isAuthenticated = await checkAuth();
+
+  // Service Worker & Web Push 登録
+  if (isAuthenticated && 'serviceWorker' in navigator) {
+    await setupPushNotifications();
+  }
+}
+
+/**
+ * Service Worker を登録し、Web Push 通知の購読を設定する
+ */
+async function setupPushNotifications() {
+  try {
+    // Service Worker 登録
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log('📲 Service Worker registered:', registration.scope);
+
+    // 通知権限を要求
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('📲 Notification permission denied');
+      return;
+    }
+
+    // VAPID 公開鍵を取得
+    const vapidRes = await fetch('/api/push/vapid-key');
+    if (!vapidRes.ok) {
+      console.warn('📲 VAPID key not available');
+      return;
+    }
+    const { publicKey } = await vapidRes.json();
+
+    // 既存のサブスクリプションを確認
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      // 新しいサブスクリプションを作成
+      const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+      console.log('📲 Push subscription created');
+    }
+
+    // サーバーにサブスクリプション情報を送信
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUserId,
+        subscription: subscription.toJSON(),
+      }),
+    });
+    console.log('📲 Push subscription sent to server');
+  } catch (err) {
+    console.error('📲 Push setup failed:', err);
+  }
+}
+
+/**
+ * Base64 URL エンコードされた文字列を Uint8Array に変換する
+ * (VAPID 公開鍵の変換に必要)
+ * @param {string} base64String
+ * @returns {Uint8Array}
+ */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 init();

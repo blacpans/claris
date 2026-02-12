@@ -6,4 +6,6 @@ export { EventCollector, eventCollector } from './eventCollector.js';
 export { EventQueue } from './eventQueue.js';
 export { NotificationService, notificationService } from './notificationService.js';
 export { ProactiveAgent } from './proactiveAgent.js';
+export type { PushSubscriptionData } from './pushService.js';
+export { PushService } from './pushService.js';
 export type { ClarisEvent, EventPriority, EventSource, ProactiveNotification } from './types.js';
