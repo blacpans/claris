@@ -54,7 +54,8 @@
     "lint-staged": "^16.2.7",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -5,4 +5,5 @@
 export { EventCollector, eventCollector } from './eventCollector.js';
 export { EventQueue } from './eventQueue.js';
 export { NotificationService, notificationService } from './notificationService.js';
+export { ProactiveAgent } from './proactiveAgent.js';
 export type { ClarisEvent, EventPriority, EventSource, ProactiveNotification } from './types.js';

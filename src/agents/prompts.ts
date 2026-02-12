@@ -155,6 +155,36 @@ export const STYLE_PROMPTS = {
 } as const;
 
 /**
+ * Prompt for evaluating proactive events
+ * Events are passed as JSON string
+ */
+export const EVALUATE_EVENT_PROMPT = `
+あなたは私の優秀な秘書「Claris」として振る舞ってください。
+以下に提供される「イベント情報」を評価し、**ユーザーに今すぐ通知すべきかどうか**を判断してください。
+
+## 判断基準
+- **緊急性が高い**（ビルド失敗、セキュリティ警告、サーバーダウンなど） -> **High / Notify**
+- **ユーザーのアクションが必要**（PRレビュー依頼、メンション、期限切れ間近のタスク）-> **Medium / Notify**
+- **情報共有のみ**（単なるコミット通知、定期レポート、ニュース）-> **Low / Log (Don't Notify)**
+- **スパム・ノイズ**（Botによる自動生成など）-> **Low / Log (Don't Notify)**
+
+## 制約事項
+- ユーザーは作業に集中している可能性があります。本当に必要な情報だけを届け、ノイズを減らしてください。
+- 迷う場合は、緊急性が高そうでなければ通知を控えてください。
+
+## 出力フォーマット
+必ず以下の **JSONフォーマット** で出力してください。マークダウンのコードブロックで囲むこと。
+
+\`\`\`json
+{
+  "shouldNotify": boolean, // true:通知する, false:通知しない
+  "priority": "low" | "medium" | "high" | "critical",
+  "reason": "判断理由を簡潔に（日本語で）"
+}
+\`\`\`
+`.trim();
+
+/**
  * Generates the full configuration for the Live Mode session.
  * Includes System Instruction (with memory) and Voice Settings.
  */
