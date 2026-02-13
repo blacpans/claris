@@ -4,68 +4,120 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Claris Live 🌸</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#FF69B4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body class="bg-background text-foreground font-sans antialiased h-[100dvh] flex flex-col relative selection:bg-primary selection:text-primary-foreground">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center gap-4">
+        <div class="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <p class="text-muted-foreground animate-pulse text-sm font-medium">Clarisが準備運動中...✨</p>
+    </div>
+
     <!-- Login Dialog -->
-    <dialog id="login-overlay" class="login-dialog">
-        <div class="login-card">
-            <h1>🌸 Claris</h1>
-            <p>おかえり！Clarisと話すにはログインが必要だよ！✨</p>
-            <button id="login-button" class="btn btn-primary">
+    <dialog id="login-overlay" class="login-dialog backdrop:bg-background/80 backdrop:backdrop-blur-sm p-0 bg-transparent shadow-none border-none w-full max-w-md m-auto">
+        <div class="login-card bg-card text-card-foreground border rounded-xl shadow-2xl p-8 flex flex-col items-center gap-6">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">🌸 Claris</h1>
+            <p class="text-center text-muted-foreground leading-relaxed">
+                おかえり！Clarisと話すには<br>ログインが必要だよ！✨
+            </p>
+            <button id="login-button" class="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary px-8 text-lg font-semibold text-primary-foreground shadow transition-transform hover:scale-105 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
                 Googleでログイン
             </button>
         </div>
     </dialog>
-  <h1>Claris Live 🌸</h1>
-  
-  <div id="chat-container">
-    <div id="chat-history">
-      <div class="message ai">
-        <p>こんにちは！<strong>Claris</strong>だよ🌸</p>
-        <p>お話したいこと、何かある？✨</p>
-      </div>
-    </div>
+
+  <div id="app-container" style="display: none;" class="flex flex-col h-full w-full opacity-0 transition-opacity duration-500 visible:opacity-100">
+      
+      <!-- App Header -->
+      <header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-sm border-b p-4 flex justify-between items-center h-16 transition-all duration-300">
+        <div class="flex items-center gap-3">
+            <h1 class="text-xl font-bold tracking-widest bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Claris 🌸</h1>
+            <div id="version-display" class="text-xs text-muted-foreground font-mono mt-1 opacity-70"></div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <!-- Visualizer (Hidden by default) -->
+            <canvas id="waveform-header" width="60" height="30" class="opacity-50"></canvas>
+            
+            <button id="logout-btn" class="p-2 text-muted-foreground hover:text-foreground transition-colors hover:bg-muted rounded-full hidden" aria-label="Logout">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            </button>
+        </div>
+      </header>
+
+      <!-- Chat Area -->
+      <main id="chat-container" class="flex-1 w-full pt-20 pb-28 flex flex-col">
+        <div id="chat-history" class="flex-1 min-h-0 overflow-y-auto space-y-4 py-4 scroll-smooth centered-col">
+          <!-- Initial AI Message -->
+          <div class="message ai flex w-full max-w-[85%] flex-col gap-2 rounded-2xl rounded-tl-none bg-muted p-4 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2">
+            <div class="prose prose-sm dark:prose-invert">
+                <p>こんにちは！<strong>Claris</strong>だよ🌸<br>お話ししたいこと、何かある？✨</p>
+            </div>
+            <span class="text-[10px] text-muted-foreground self-end opacity-70">Just now</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- Input Area -->
+      <footer class="fixed bottom-0 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex gap-3 items-end justify-center z-40 transition-all duration-300">
+        <form id="input-area" class="w-full max-w-2xl mx-auto relative flex items-end gap-2 bg-muted/50 p-2 rounded-3xl border border-input shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:bg-background transition-all">
+          <button type="button" id="live-btn" aria-label="Toggle Voice Call" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-input bg-secondary text-primary hover:bg-secondary/80 transition-all hover:scale-105 active:scale-95 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </button>
+          
+          <textarea 
+            id="message-input" 
+            placeholder="Message..." 
+            enterkeyhint="send"
+            class="flex-1 bg-transparent border-none resize-none focus:ring-0 py-3.5 px-4 max-h-32 min-h-12 text-sm scrollbar-hide placeholder:text-muted-foreground/50"
+          ></textarea>
+          <button 
+            type="submit" 
+            id="send-btn" 
+            aria-label="メッセージを送信"
+            class="h-12 w-12 shrink-0 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-all hover:scale-105 active:scale-95"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          </button>
+        </form>
+        <p class="text-[10px] text-center text-muted-foreground mt-2 opacity-50 font-mono absolute bottom-1 left-1/2 -translate-x-1/2 hidden">Powered by Gemini 2.0 Flash</p>
+      </footer>
   </div>
 
-  <form id="input-area">
-    <div id="live-indicator">
-      <div class="live-dot"></div>
-      Voice Call Active
-    </div>
-    
-    <!-- Changed to Phone Icon for "Call" metaphor -->
-    <button type="button" id="live-btn" aria-label="Toggle Voice Call">📞</button>
-    
-    <textarea id="message-input" placeholder="Message..." rows="1"></textarea>
-    
-    <button type="submit" id="send-btn">➤</button>
-  </form>
-
-  <div id="version-display"></div>
-
   <!-- Call Mode Overlay -->
-  <dialog id="call-overlay" class="call-overlay">
-    <div class="overlay-header">
-      <h2>Claris Live 🌸</h2>
-      <div id="status-text">Connecting...</div>
+  <!-- Updated background to use theme variable with high opacity for immersion but consistency -->
+  <dialog id="call-overlay" class="call-overlay fixed inset-0 z-[100] w-full h-full max-w-none max-h-none m-0 p-6 bg-background/95 backdrop-blur-xl text-foreground opacity-0 transition-opacity duration-300 open:flex open:opacity-100 flex-col items-center justify-between">
+    <div class="overlay-header text-center mt-8 z-10 w-full animate-in fade-in slide-in-from-top-4 duration-500">
+      <h2 class="text-3xl font-light tracking-widest mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Claris Live 🌸</h2>
+      <div id="status-text" class="text-sm text-muted-foreground font-light animate-pulse">Connecting...</div>
     </div>
     
-    <canvas id="waveform"></canvas>
+    <canvas id="waveform" class="w-full max-w-3xl h-64 flex-1 my-8"></canvas>
 
-    <div class="overlay-controls">
+    <div class="overlay-controls w-full flex flex-col items-center gap-8 mb-12 z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
       <!-- Mic Selector (Duplicated logic, synced in JS) -->
-      <div class="overlay-mic-container">
-         <select id="mic-selector-overlay" class="mic-selector overlay-selector">
-            <!-- Populated by JS -->
-         </select>
+      <div class="overlay-mic-container w-full max-w-xs">
+         <div class="relative">
+             <select id="mic-selector-overlay" class="mic-selector w-full appearance-none bg-secondary/50 border border-border rounded-full py-3 px-6 pr-10 text-foreground text-center cursor-pointer hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring transition-all backdrop-blur-sm">
+                <!-- Populated by JS -->
+             </select>
+             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-muted-foreground">
+                <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+            </div>
+         </div>
       </div>
 
-      <button id="end-call-btn" class="end-call-btn" aria-label="End Call">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.52 7.5 6.4 12 6.4c4.5 0 8.66 2.12 11.71 5.27.18.18.29.43.29.71 0 .28-.11.53-.29.7l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
-        </svg>
+      <button id="end-call-btn" class="end-call-btn flex h-16 w-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg hover:bg-destructive/90 hover:scale-110 active:scale-95 transition-all duration-300" aria-label="End Call">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.52 7.5 6.4 12 6.4c4.5 0 8.66 2.12 11.71 5.27.18.18.29.43.29.71 0 .28-.11.53-.29.7l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
       </button>
     </div>
   </dialog>

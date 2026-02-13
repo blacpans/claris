@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { WebSocket } from 'ws';
-import type { PushService } from './pushService.js';
 import type { ClarisEvent } from './types.js';
 
 // PushService のモック

@@ -25,7 +25,6 @@ async function checkAuth() {
       const data = await res.json();
       if (data.authenticated) {
         currentUserId = data.userId;
-        if (UI.loginOverlay.open) UI.loginOverlay.close();
         console.log(`🌸 Logged in as: ${currentUserId}`);
         return true;
       }
@@ -35,19 +34,38 @@ async function checkAuth() {
   }
 
   // Not authenticated
-  if (!UI.loginOverlay.open) UI.loginOverlay.showModal();
   return false;
 }
 
 // Bind Login Button
 if (UI.loginButton) {
-  UI.loginButton.addEventListener('click', () => {
+  UI.loginButton.addEventListener('click', async () => {
+    // Request notification permission on user interaction
+    await setupPushNotifications().catch((err) => console.error('Notification setup failed:', err));
     window.location.href = '/api/auth/login';
+  });
+}
+
+// Bind Logout Button
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    if (confirm('ログアウトする？🌸')) {
+      try {
+        await fetch('/api/auth/logout');
+        window.location.reload();
+      } catch (err) {
+        console.error('Logout failed:', err);
+      }
+    }
   });
 }
 
 // Initial Setup
 async function init() {
+  const loadingScreen = document.getElementById('loading-screen');
+  const appContainer = document.getElementById('app-container');
+
   // Fetch Config
   try {
     const res = await fetch('/api/config');
@@ -66,9 +84,49 @@ async function init() {
   // Auth Check
   const isAuthenticated = await checkAuth();
 
-  // Service Worker & Web Push 登録
-  if (isAuthenticated && 'serviceWorker' in navigator) {
-    await setupPushNotifications();
+  // Hide loading screen
+  if (loadingScreen) {
+    loadingScreen.classList.add('hidden');
+    // Remove from DOM after transition (optional, but good for cleanup)
+    setTimeout(() => {
+      if (loadingScreen.parentNode) loadingScreen.parentNode.removeChild(loadingScreen);
+    }, 500);
+  }
+
+  if (isAuthenticated) {
+    // Show App UI with fade in
+    if (appContainer) {
+      // appContainer is display:flex via Tailwind classes (flex flex-col)
+      // Hidden via style="display:none" initially.
+      appContainer.style.display = '';
+
+      // Use requestAnimationFrame for smoother transition activation
+      requestAnimationFrame(() => {
+        appContainer.classList.remove('opacity-0');
+        appContainer.classList.add('opacity-100');
+      });
+    }
+
+    // Show logout button
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+
+    // Initial scroll to bottom
+    if (UI.chatHistory) {
+      setTimeout(() => {
+        UI.chatHistory.scrollTop = UI.chatHistory.scrollHeight;
+      }, 100); // Wait for layout
+    }
+
+    // Service Worker & Web Push 登録
+    if ('serviceWorker' in navigator) {
+      // Notification setup moved to user interaction (login/enable)
+      // await setupPushNotifications();
+    }
+  } else {
+    // Show Login Overlay
+    if (UI.loginOverlay && !UI.loginOverlay.open) {
+      UI.loginOverlay.showModal();
+    }
   }
 }
 
@@ -147,7 +205,7 @@ init();
 if (UI.messageInput) {
   UI.messageInput.addEventListener('input', function () {
     this.style.height = 'auto'; // Reset to calculate scrollHeight
-    const newHeight = Math.min(this.scrollHeight, 150); // Max height 150px
+    const newHeight = Math.max(48, Math.min(this.scrollHeight, 150)); // Min 48px, Max 150px
     this.style.height = `${newHeight}px`;
   });
 
@@ -161,6 +219,9 @@ if (UI.messageInput) {
       }
     }
   });
+
+  // Trigger resize on init to ensure correct height (handles browser restoration)
+  UI.messageInput.dispatchEvent(new Event('input'));
 }
 
 // Handle Text Chat
@@ -172,7 +233,9 @@ if (UI.inputArea) {
 
     UI.appendMessage(text, 'user');
     UI.messageInput.value = '';
-    UI.messageInput.style.height = '50px';
+
+    // Reset height to default (48px)
+    UI.messageInput.style.height = '48px';
 
     UI.showLoading();
 
@@ -409,7 +472,7 @@ function loopPlaybackState() {
   if (isConnected) {
     requestAnimationFrame(loopPlaybackState);
   } else {
-    if (UI.liveBtn) UI.liveBtn.style.boxShadow = 'none'; // Clear on disconnect
+    if (UI.liveBtn) UI.liveBtn.style.boxShadow = ''; // Clear on disconnect
   }
 }
 
@@ -436,11 +499,11 @@ async function populateMicSelectors() {
 
   const devices = await Audio.getAudioDevices();
   const optionsHTML =
-    '<option value="" disabled>Select Microphone...</option>' +
+    '<option value="" disabled class="bg-popover text-popover-foreground">Select Microphone...</option>' +
     devices
       .map((d) => {
         const selected = d.deviceId === selectedMicId ? 'selected' : '';
-        return `<option value="${d.deviceId}" ${selected}>${d.label || `Microphone ${d.deviceId.slice(0, 5)}...`}</option>`;
+        return `<option value="${d.deviceId}" ${selected} class="bg-popover text-popover-foreground">${d.label || `Microphone ${d.deviceId.slice(0, 5)}...`}</option>`;
       })
       .join('');
 

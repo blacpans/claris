@@ -310,7 +310,14 @@ export class ServerLiveSession extends EventEmitter {
           events: [],
           lastUpdateTime: Date.now(),
         };
-        await this.sessionService.appendEvents({ session, events: this.eventsBuffer });
+        const events = this.eventsBuffer.map((e, index) => ({
+          ...e,
+          id: `ls-${Date.now()}-${index}`,
+          invocationId: undefined,
+          actions: [],
+        }));
+        // @ts-expect-error Types differ slightly but safe at runtime for Firestore
+        await this.sessionService.appendEvents({ session, events });
 
         // 2. 要約の生成と保存（長期記憶）
         const fullText = this.eventsBuffer
