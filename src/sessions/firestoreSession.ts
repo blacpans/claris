@@ -151,13 +151,25 @@ export class FirestoreSessionService {
   /**
    * Lists all sessions for a user.
    */
-  async listSessions(request: ListSessionsRequest): Promise<ListSessionsResponse> {
-    const snapshot = await this.db
+  async listSessions(
+    request: ListSessionsRequest & { limit?: number; offset?: number },
+  ): Promise<ListSessionsResponse> {
+    let query = this.db
       .collection(this.collectionName)
       .where('appName', '==', request.appName)
       .where('userId', '==', request.userId)
-      .select('id', 'appName', 'userId', 'lastUpdateTime') // Only fetch metadata
-      .get();
+      .orderBy('lastUpdateTime', 'desc')
+      .select('id', 'appName', 'userId', 'lastUpdateTime'); // Only fetch metadata
+
+    if (request.offset !== undefined) {
+      query = query.offset(request.offset);
+    }
+
+    if (request.limit !== undefined) {
+      query = query.limit(request.limit);
+    }
+
+    const snapshot = await query.get();
 
     const sessions: Session[] = snapshot.docs.map((doc) => {
       const data = doc.data() as Session;
