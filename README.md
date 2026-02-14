@@ -10,6 +10,8 @@ Claris is an autonomous AI companion designed to assist developers with code rev
 
 - 🤖 **Autonomous Agent**: Claris can make decisions and take actions proactively
 - 💬 **Conversational**: Natural language interaction with memory of past conversations
+- 🧠 **Long-Term Memory**: Remembers your preferences and past interactions via Firestore Vector Search
+- 🔔 **Web Push Notifications**: Get notified when Claris completes a task (e.g., finishing a PR review)
 - 🔧 **Tool-Enabled**: Git operations, code review, and more through ADK Tools
 - ☁️ **Cloud-Ready**: Designed to run on Cloud Run with Firestore state persistence
 - 🦀 **Soul Unison**: Automatically switches Thinking Style (Persona) based on file context
@@ -20,7 +22,8 @@ Claris is an autonomous AI companion designed to assist developers with code rev
 - **Framework**: Google Agent Development Kit (ADK)
 - **Runtime**: Node.js + Hono
 - **LLM**: Google Gemini (via Vertex AI)
-- **State**: Firestore (for session persistence)
+- **State**: Firestore (for session persistence & memory)
+- **Notifications**: Web Push API
 - **Deployment**: Google Cloud Run (Requires "CPU always allocated" for background tasks)
 
 ## Soul Unison (Thinking Styles) 🧠
@@ -63,11 +66,20 @@ You can customize Claris's behavior by creating a `claris.config.json` file in y
 }
 ```
 
-### Preferred Style 🔒
-If you want to lock Claris into a specific Soul regardless of the file type, set `preferredStyle`.
-- `"guard"`: Always strict and safe.
-- `"logic"`: Always logical and cool.
-- `"passion"`: Always energetic and creative.
+## Project Structure 📁
+
+```text
+claris/
+├── src/
+│   ├── agents/      # Agent personas and logic (Claris)
+│   ├── core/        # Core systems (Live Session, Memory, Proactive)
+│   ├── tools/       # ADK Tools for external services
+│   ├── runtime/     # Server, Webhook, and CLI runner
+│   └── config/      # Environment and model configurations
+├── public/          # Frontend assets and UI
+├── scripts/         # Utility scripts (Deployment, Debug)
+└── .env.example     # Environment variable template
+```
 
 ## Getting Started
 
@@ -82,44 +94,22 @@ cp .env.example .env
 npm run dev
 ```
 
-
-### Gemini Models 🧠
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GEMINI_LIVE_MODEL` | Live API Model | `gemini-live-2.5-flash-native-audio` |
-| `GEMINI_LIVE_LOCATION` | Vertex AI Location for Live | `us-central1` |
-| `GEMINI_FLASH_MODEL` | Flash Model (Cheap/Fast) | `gemini-3-flash-preview` |
-| `GEMINI_PRO_MODEL` | Pro Model (High Reasoning) | `gemini-3-pro-preview` |
-| `VOICEVOX_GEMINI_MODEL` | Gemini Model for TTS | `gemini-2.0-flash-exp` |
-| `GEMINI_API_VERSION` | Gemini API Version | `v1beta1` |
-
-### General Configuration ⚙️
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID | - |
-| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location | `global` |
-| `FIRESTORE_COLLECTION` | Firestore Collection | `claris-sessions` |
-| `TZ` | Timezone | `Asia/Tokyo` |
-| `PORT` | Server Port | `8080` |
-| `CLARIS_NAME` | Agent Name | `Claris` |
-| `SUMMARY_TIMEOUT_MS` | Summary Timeout (ms) | `10000` |
-
-### Service Integrations 🔌
+### Environment Variables ⚙️
 
 | Variable | Description |
 |----------|-------------|
+| `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (e.g., `global`, `asia-northeast1`) |
+| `GEMINI_LIVE_MODEL` | Live API Model |
+| `GEMINI_FLASH_MODEL` | Flash Model (Cheap/Fast) |
+| `GEMINI_PRO_MODEL` | Pro Model (High Reasoning) |
 | `GITHUB_TOKEN` | GitHub Personal Access Token |
 | `GITHUB_WEBHOOK_SECRET` | GitHub Webhook Secret |
 | `GOOGLE_CLIENT_ID` | OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | OAuth Client Secret |
-| `GOOGLE_REDIRECT_URI` | OAuth Redirect URI |
-| `AUTH_SECRET` | Auth State Secret |
-| `GOOGLE_MAPS_API_KEY` | Google Maps API Key |
-| `VERTEX_SEARCH_DATA_STORE_ID` | Vertex Search Store ID |
-| `VERTEX_SEARCH_SERVING_CONFIG`| Vertex Search Config |
-| `RELAY_PORT` | Relay Server Port |
+| `FIRESTORE_COLLECTION` | Firestore Collection for sessions |
+| `VAPID_PUBLIC_KEY` | Web Push VAPID Public Key |
+| `VAPID_PRIVATE_KEY` | Web Push VAPID Private Key |
 
 ## Firestore & Vector Search Setup 🔥
 
@@ -140,7 +130,7 @@ You can interact with Claris directly from your terminal.
 
 ```bash
 # Method 1: Using npx (Recommended for dev)
-npx tsx src/cli/index.ts talk "Hello!"
+npx tsx src/index.ts talk "Hello!"
 
 # Method 2: Global Link (For ease of use)
 npm install -g .

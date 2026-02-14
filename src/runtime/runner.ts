@@ -139,13 +139,15 @@ export class AdkRunnerService {
       state: runnerState,
     });
 
-    // 🧠 Context Injection: 공급 historical events to the runner
+    // 🧠 Context Injection: Supply historical events to the runner
     if (session.events && session.events.length > 0) {
       console.log(`[Runner] Injecting ${session.events.length} historical events into runner session.`);
-      await runner.sessionService.appendEvents({
-        session,
-        events: session.events,
-      });
+      for (const event of session.events) {
+        await runner.sessionService.appendEvent({
+          session,
+          event,
+        });
+      }
     }
 
     // Execute the agent turn
