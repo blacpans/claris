@@ -208,18 +208,6 @@ export class ServerLiveSession extends EventEmitter {
   private async sendAudioInternal(inputAudioPCM: Buffer) {
     if (!this.session) return;
     try {
-      // Check for silence (simple check: if all bytes are 0)
-      let isSilence = true;
-      for (let i = 0; i < inputAudioPCM.length; i++) {
-        if (inputAudioPCM[i] !== 0) {
-          isSilence = false;
-          break;
-        }
-      }
-      if (isSilence) {
-        // console.log('Introvert packet (silence)...');
-      }
-
       await (
         this.session as { sendRealtimeInput: (arg: { media: { mimeType: string; data: string } }) => Promise<void> }
       ).sendRealtimeInput({
