@@ -10,6 +10,7 @@ const SW_VERSION = '1.0.0';
  * push イベント: サーバーからの Web Push を受信
  */
 self.addEventListener('push', (event) => {
+  console.log('[SW] Push Received:', event.data ? event.data.text() : 'No data');
   const defaultData = {
     title: 'Claris 🌸',
     body: '新しい通知があるよ！',

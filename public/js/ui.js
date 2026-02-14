@@ -69,11 +69,11 @@ export function appendMessage(text, type) {
   const div = document.createElement('div');
   // Message styling based on type
   const baseClasses =
-    'flex w-full max-w-[85%] flex-col gap-2 rounded-2xl p-4 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2';
+    'flex w-full max-w-[85%] flex-col gap-2 rounded-2xl p-4 text-sm shadow-sm animate-in fade-in slide-in-from-bottom-2 backdrop-blur-md border border-white/10';
   const typeClasses =
     type === 'user'
-      ? 'ml-auto bg-primary text-primary-foreground rounded-br-none'
-      : 'mr-auto bg-muted text-foreground rounded-tl-none';
+      ? 'ml-auto bg-primary/80 text-primary-foreground rounded-br-none'
+      : 'mr-auto bg-background/60 text-foreground rounded-tl-none';
 
   div.className = `${baseClasses} ${typeClasses}`;
 
