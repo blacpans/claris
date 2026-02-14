@@ -11,9 +11,10 @@ Claris is an autonomous AI companion designed to assist developers with code rev
 - 🤖 **Autonomous Agent**: Claris can make decisions and take actions proactively
 - 💬 **Conversational**: Natural language interaction with memory of past conversations
 - 🧠 **Long-Term Memory**: Remembers your preferences and past interactions via Firestore Vector Search
-- 🔔 **Web Push Notifications**: Get notified when Claris completes a task (e.g., finishing a PR review)
-- 🔧 **Tool-Enabled**: Git operations, code review, and more through ADK Tools
-- ☁️ **Cloud-Ready**: Designed to run on Cloud Run with Firestore state persistence
+- 🔔 **Proactive Actions**: Automatically notices errors or PR comments and offers help
+- 📱 **Web Push Notifications**: Get notified when Claris completes a task (e.g., finishing a PR review)
+- 🎙️ **Live Mode**: Multimodal real-time voice interaction via Gemini Live API
+- 🔧 **Tool-Enabled**: Git operations, Google Services (Calendar, Gmail, etc.) through ADK Tools
 - 🦀 **Soul Unison**: Automatically switches Thinking Style (Persona) based on file context
 - ⚙️ **Navi Customizer**: Extensive configuration via `claris.config.json`
 
@@ -21,7 +22,7 @@ Claris is an autonomous AI companion designed to assist developers with code rev
 
 - **Framework**: Google Agent Development Kit (ADK)
 - **Runtime**: Node.js + Hono
-- **LLM**: Google Gemini (via Vertex AI)
+- **LLM**: Google Gemini (Flash / Pro / Multimodal Live API)
 - **State**: Firestore (for session persistence & memory)
 - **Notifications**: Web Push API
 - **Deployment**: Google Cloud Run (Requires "CPU always allocated" for background tasks)
@@ -47,11 +48,10 @@ claris auth
 ```
 
 ### YouTube Brand Account (Optional)
-If you manage a YouTube channel via a Brand Account, you must authenticate separately with the "youtube" profile:
+If you manage a YouTube channel via a Brand Account, you must authenticate separately:
 ```bash
 claris auth --profile youtube
 ```
-*Note: This creates a separate `token_youtube.json` file. Claris will automatically switch to this credential when using YouTube tools.*
 
 ## Configuration ⚙️
 
@@ -61,6 +61,7 @@ You can customize Claris's behavior by creating a `claris.config.json` file in y
 {
   "attack": 1024,          // Max output tokens
   "rapid": "flash",        // Model speed: "flash" or "pro"
+  "charge": 10,            // Conversation history length
   "humor": 0.8,            // Temperature (Creativity)
   "preferredStyle": "guard" // Force a specific soul (Optional)
 }
@@ -71,11 +72,14 @@ You can customize Claris's behavior by creating a `claris.config.json` file in y
 ```text
 claris/
 ├── src/
-│   ├── agents/      # Agent personas and logic (Claris)
-│   ├── core/        # Core systems (Live Session, Memory, Proactive)
-│   ├── tools/       # ADK Tools for external services
-│   ├── runtime/     # Server, Webhook, and CLI runner
-│   └── config/      # Environment and model configurations
+│   ├── agents/      # Agent personas and prompts
+│   ├── cli/         # CLI commands (auth, chat, live, etc.)
+│   ├── core/        # Core systems (Live, Memory, Proactive, Auth)
+│   ├── tools/       # ADK Tools for external services (Git, Google)
+│   ├── runtime/     # Server, Webhook, and WebSocket handlers
+│   ├── config/      # Environment and model configurations
+│   ├── sessions/    # Firestore session persistence
+│   └── utils/       # Shared utility functions
 ├── public/          # Frontend assets and UI
 ├── scripts/         # Utility scripts (Deployment, Debug)
 └── .env.example     # Environment variable template
@@ -86,6 +90,10 @@ claris/
 ```bash
 # Install dependencies
 npm install
+
+# Build and link the CLI globally
+npm run build
+npm install -g .
 
 # Set up environment variables
 cp .env.example .env
@@ -99,15 +107,11 @@ npm run dev
 | Variable | Description |
 |----------|-------------|
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID |
-| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (e.g., `global`, `asia-northeast1`) |
-| `GEMINI_LIVE_MODEL` | Live API Model |
-| `GEMINI_FLASH_MODEL` | Flash Model (Cheap/Fast) |
-| `GEMINI_PRO_MODEL` | Pro Model (High Reasoning) |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (e.g., `us-central1`, `asia-northeast1`) |
+| `GEMINI_MODEL` | Default Gemini Model (e.g., `gemini-1.5-pro`) |
 | `GITHUB_TOKEN` | GitHub Personal Access Token |
-| `GITHUB_WEBHOOK_SECRET` | GitHub Webhook Secret |
-| `GOOGLE_CLIENT_ID` | OAuth Client ID |
-| `GOOGLE_CLIENT_SECRET` | OAuth Client Secret |
-| `FIRESTORE_COLLECTION` | Firestore Collection for sessions |
+| `GITHUB_WEBHOOK_SECRET` | GitHub Webhook Secret (Required for webhook) |
+| `FIRESTORE_COLLECTION` | Firestore Collection (e.g., `claris-sessions`) |
 | `VAPID_PUBLIC_KEY` | Web Push VAPID Public Key |
 | `VAPID_PRIVATE_KEY` | Web Push VAPID Private Key |
 
@@ -129,14 +133,16 @@ To enable Long-Term Memory, you need to configure a Firestore Vector Search Inde
 You can interact with Claris directly from your terminal.
 
 ```bash
-# Method 1: Using npx (Recommended for dev)
-npx tsx src/index.ts talk "Hello!"
+# Start a chat session
+claris chat
 
-# Method 2: Global Link (For ease of use)
-npm install -g .
-claris talk "Hello!" -c src/index.ts
+# Start a real-time voice session
+claris live
 
-# Check Status (Google Calendar & Gmail)
+# Authenticate with Google
+claris auth
+
+# Check status (Calendar, Gmail)
 claris status
 ```
 

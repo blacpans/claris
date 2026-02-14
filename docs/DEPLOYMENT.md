@@ -33,11 +33,13 @@ gcloud run deploy claris \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars "GOOGLE_CLOUD_PROJECT=<YOUR_PROJECT_ID>,GOOGLE_CLOUD_LOCATION=<YOUR_LOCATION>,FIRESTORE_COLLECTION=<YOUR_COLLECTION>,TZ=<YOUR_TZ>,AUTH_SECRET=<YOUR_AUTH_SECRET>" \
-  --set-secrets "GITHUB_TOKEN=GITHUB_TOKEN:latest,GEMINI_MODEL=GEMINI_MODEL:latest,GITHUB_WEBHOOK_SECRET=GITHUB_WEBHOOK_SECRET:latest" \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=<YOUR_PROJECT_ID>,GOOGLE_CLOUD_LOCATION=us-central1,FIRESTORE_COLLECTION=claris-sessions,TZ=Asia/Tokyo" \
+  --set-secrets "GITHUB_TOKEN=GITHUB_TOKEN:latest,GEMINI_MODEL=GEMINI_MODEL:latest,GITHUB_WEBHOOK_SECRET=GITHUB_WEBHOOK_SECRET:latest,VAPID_PUBLIC_KEY=VAPID_PUBLIC_KEY:latest,VAPID_PRIVATE_KEY=VAPID_PRIVATE_KEY:latest" \
   --no-cpu-throttling \
   --quiet
 ```
+
+### 検証環境 (Staging) 🧪
 
 検証環境は実験用なので、シークレットは直接 **環境変数** として渡してるよ。
 カスタムドメイン `<YOUR_STAGING_DOMAIN>` と紐付いてるじゃんね！✨
@@ -51,7 +53,7 @@ gcloud run deploy claris-staging \
   --source . \
   --region asia-northeast1 \
   --allow-unauthenticated \
-  --set-env-vars "GOOGLE_CLOUD_PROJECT=<YOUR_PROJECT_ID>,GOOGLE_CLOUD_LOCATION=<YOUR_LOCATION>,GEMINI_MODEL=<YOUR_MODEL>,FIRESTORE_COLLECTION=<YOUR_STAGING_COLLECTION>,GITHUB_WEBHOOK_SECRET=<YOUR_WEBHOOK_SECRET>,TZ=<YOUR_TZ>,AUTH_SECRET=<YOUR_STAGING_AUTH_SECRET>" \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=<YOUR_PROJECT_ID>,GOOGLE_CLOUD_LOCATION=asia-northeast1,GEMINI_MODEL=gemini-1.5-flash,FIRESTORE_COLLECTION=claris-staging-sessions,GITHUB_WEBHOOK_SECRET=<YOUR_WEBHOOK_SECRET>,TZ=Asia/Tokyo" \
   --no-cpu-throttling \
   --quiet
 ```
