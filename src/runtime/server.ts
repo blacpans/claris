@@ -111,6 +111,25 @@ app.get('/api/config', (c) => {
   }
 });
 
+// フロントエンド向けに動的な設定スクリプトを配信
+app.get('/api/config.js', (c) => {
+  try {
+    const pkgPath = join(process.cwd(), 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    const config = {
+      version: `v${pkg.version}`,
+      wsPath: '/ws/live',
+    };
+    const content = `window.CLARIS_CONFIG = ${JSON.stringify(config)};`;
+    return c.text(content, 200, { 'Content-Type': 'application/javascript' });
+  } catch (error) {
+    console.error('Failed to load package.json for script:', error);
+    return c.text('window.CLARIS_CONFIG = { version: "v0.0.0", wsPath: "/ws/live" };', 200, {
+      'Content-Type': 'application/javascript',
+    });
+  }
+});
+
 // ログイン中のユーザー情報を取得
 app.get('/api/auth/me', async (c) => {
   const userId = await getSession(c);
