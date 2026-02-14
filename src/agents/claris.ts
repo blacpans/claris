@@ -102,7 +102,7 @@ export async function createClarisAgent(context?: ClarisContext) {
   // In review mode, we exclude heavy tools to save tokens and avoid distraction
   const tools =
     mode === 'review'
-      ? [] // No tools needed for pure code review for now (maybe generic search later)
+      ? [googleSearch, searchFiles, getPRDetailsTool, listPRsTool] // Essential tools for context-rich review
       : [
           listUpcomingEvents,
           createEvent,

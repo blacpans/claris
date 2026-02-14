@@ -14,9 +14,6 @@ const PORT = Number(process.env.PORT) || 8080;
 
 console.log('🌸 Claris is starting up...');
 
-// Agent instantiation removed as it was incorrect here.
-// Tools should be registered where the agent is initialized.
-
 const server = serve(
   {
     fetch: app.fetch,
