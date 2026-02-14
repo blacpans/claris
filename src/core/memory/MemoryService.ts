@@ -161,21 +161,32 @@ export class MemoryService {
 
   private splitTextIntoChunks(text: string, maxLength: number): string[] {
     const chunks: string[] = [];
-    let currentChunk = '';
+    let currentChunkLength = 0;
+    let currentChunkStartLineIndex = 0;
 
     // Simple line-based splitting to avoid cutting sentences ideally
     // But for now, simple length based splitting with newline preference
     const lines = text.split('\n');
 
-    for (const line of lines) {
-      if (currentChunk.length + line.length > maxLength) {
-        if (currentChunk) chunks.push(currentChunk);
-        currentChunk = `${line}\n`;
+    for (const [i, line] of lines.entries()) {
+      const len = line.length + 1; // +1 for \n
+
+      if (currentChunkLength + len > maxLength) {
+        if (currentChunkLength > 0) {
+          const chunkLines = lines.slice(currentChunkStartLineIndex, i);
+          chunks.push(chunkLines.join('\n') + '\n');
+        }
+        currentChunkStartLineIndex = i;
+        currentChunkLength = len;
       } else {
-        currentChunk += `${line}\n`;
+        currentChunkLength += len;
       }
     }
-    if (currentChunk) chunks.push(currentChunk);
+
+    if (currentChunkLength > 0) {
+      const chunkLines = lines.slice(currentChunkStartLineIndex);
+      chunks.push(chunkLines.join('\n') + '\n');
+    }
 
     // Fallback: if a single line is massive (unlikely in chat logs but possible), split strictly
     if (chunks.length === 0 && text.length > 0) {
