@@ -119,8 +119,8 @@ async function init() {
 
     // Service Worker & Web Push 登録
     if ('serviceWorker' in navigator) {
-      // Notification setup moved to user interaction (login/enable)
-      // await setupPushNotifications();
+      // ログイン済みならバックグラウンドで通知設定を確認/更新
+      setupPushNotifications().catch((err) => console.error('SW init failed:', err));
     }
   } else {
     // Show Login Overlay
