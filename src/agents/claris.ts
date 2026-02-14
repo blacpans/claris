@@ -7,19 +7,26 @@
 import { Gemini, LlmAgent } from '@google/adk';
 import { getGenerationLocation, getModelName, getStyleForExtension, loadConfig } from '@/config/index.js';
 import {
+  addLabelsTool,
+  addReviewerTool,
   addTask,
   appendToSheet,
   createEvent,
+  createReviewTool,
   createSheet,
+  fetchDiffTool,
   getDirections,
+  getPRDetailsTool,
   getWeather,
   googleSearch,
   listConnections,
   listPhotos,
   listPlaylists,
+  listPRsTool,
   listTasks,
   listUnreadEmails,
   listUpcomingEvents,
+  postCommentTool,
   readSheet,
   searchContacts,
   searchFiles,
@@ -117,6 +124,13 @@ export async function createClarisAgent(context?: ClarisContext) {
           listPhotos,
           searchContacts,
           listConnections,
+          fetchDiffTool,
+          postCommentTool,
+          listPRsTool,
+          getPRDetailsTool,
+          addReviewerTool,
+          createReviewTool,
+          addLabelsTool,
         ];
 
   return new LlmAgent({
