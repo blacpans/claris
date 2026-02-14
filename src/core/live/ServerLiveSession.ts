@@ -1,8 +1,9 @@
 import { EventEmitter } from 'node:events';
 import type { Event, Session } from '@google/adk';
 import { GoogleGenAI, type Part } from '@google/genai';
-import { generateLiveSessionConfig } from '@/agents/prompts.js';
+import { generateLiveSessionConfig, STYLE_PROMPTS } from '@/agents/prompts.js';
 import '@/config/env.js';
+import { getStyleForExtension, loadConfig } from '@/config/index.js';
 import { getLiveModel } from '@/config/models.js';
 import { MemoryService } from '@/core/memory/MemoryService.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
@@ -74,7 +75,7 @@ export class ServerLiveSession extends EventEmitter {
     this.memoryService = new MemoryService();
   }
 
-  async start(userId = 'anonymous') {
+  async start(userId = 'anonymous', activeFile?: string) {
     this.currentUserId = userId;
     this.eventsBuffer = []; // Reset buffer for new session
 
@@ -90,8 +91,14 @@ export class ServerLiveSession extends EventEmitter {
     const memory = await this.loadMemory(userId);
     console.log(`🧠 Memory Loaded: ${memory.length} characters`);
 
+    // 🦀 Soul Unison integration: Determine style based on active file or config
+    const configData = await loadConfig();
+    const style = getStyleForExtension(activeFile || '', configData);
+    const soulPrompt = STYLE_PROMPTS[style];
+    console.log(`🔌 Applying Style: ${style} Soul (${activeFile || 'no file'})`);
+
     // ライブセッションでは常に「Claris」として振る舞うじゃんね！🌸✨
-    const config = generateLiveSessionConfig('Claris', memory);
+    const config = generateLiveSessionConfig('Claris', memory, soulPrompt);
 
     try {
       // biome-ignore lint/suspicious/noExplicitAny: SDK types for Live API are currently incomplete

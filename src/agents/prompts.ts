@@ -188,7 +188,7 @@ export const EVALUATE_EVENT_PROMPT = `
  * Generates the full configuration for the Live Mode session.
  * Includes System Instruction (with memory) and Voice Settings.
  */
-export function generateLiveSessionConfig(agentName: string, memory: string) {
+export function generateLiveSessionConfig(agentName: string, memory: string, soulPrompt?: string) {
   const baseInstruction = CLARIS_INSTRUCTIONS.replace(/\${NAME}/g, agentName);
 
   // 🕐 現在日時の注入
@@ -206,7 +206,7 @@ export function generateLiveSessionConfig(agentName: string, memory: string) {
     timeZone: process.env.TZ || 'Asia/Tokyo',
   });
 
-  const text = `Language: Japanese (Always speak in Japanese)
+  let text = `Language: Japanese (Always speak in Japanese)
 ${baseInstruction}
 
 ## 現在の日時
@@ -216,6 +216,11 @@ NOTE: You are in "Live Mode". Speak conversationally and keep responses short.
 
 ## Memory (Past Conversations)
 ${memory}`;
+
+  // 🦀 Soul Unison integration for Live Mode
+  if (soulPrompt) {
+    text += `\n\n${soulPrompt}`;
+  }
 
   return {
     responseModalities: ['AUDIO'],

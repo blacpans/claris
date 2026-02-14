@@ -9,10 +9,11 @@ export function setupWebSocket(server: Server) {
   wss.on('connection', (ws: WebSocket, req) => {
     console.log('📱 Client connected to WebSocket');
 
-    // クエリパラメータから userId を取得
+    // クエリパラメータから userId, activeFile を取得
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const userId = url.searchParams.get('userId') || 'anonymous';
-    console.log(`👤 Connected user: ${userId}`);
+    const activeFile = url.searchParams.get('activeFile') || undefined;
+    console.log(`👤 Connected user: ${userId}, Active File: ${activeFile || 'none'}`);
 
     // プロアクティブ通知のために WebSocket 接続を登録
     notificationService.register(userId, ws);
@@ -29,7 +30,7 @@ export function setupWebSocket(server: Server) {
           console.log('🎤 First audio chunk received, starting session...');
 
           // Start in background - DO NOT AWAIT!
-          liveSession.start(userId).catch((err) => {
+          liveSession.start(userId, activeFile).catch((err) => {
             console.error('Failed to start session:', err);
             isSessionStarted = false; // Reset on failure
           });
