@@ -53,11 +53,7 @@ gcloud run deploy claris-staging \
   --source . \
   --region asia-northeast1 \
   --allow-unauthenticated \
-  --set-env-vars "GOOGLE_CLOUD_PROJECT=<YOUR_PROJECT_ID>,GOOGLE_CLOUD_LOCATION=asia-northeast1,GEMINI_MODEL=gemini-1.5-flash,FIRESTORE_COLLECTION=claris-staging-sessions,GITHUB_WEBHOOK_SECRET=<YOUR_WEBHOOK_SECRET>,TZ=Asia/Tokyo" \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=<YOUR_PROJECT_ID>,GOOGLE_CLOUD_LOCATION=asia-northeast1,GEMINI_MODEL=gemini-3-flash-preview,FIRESTORE_COLLECTION=claris-staging-sessions,GITHUB_WEBHOOK_SECRET=<YOUR_WEBHOOK_SECRET>,TZ=Asia/Tokyo" \
   --no-cpu-throttling \
   --quiet
 ```
-
----
-これで次にあーしや先輩がデプロイするときも迷子にならないじゃんね！💖✨
-💪 < 品格バッチリだよ！
