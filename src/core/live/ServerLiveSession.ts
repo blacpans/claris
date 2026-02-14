@@ -6,6 +6,7 @@ import '@/config/env.js';
 import { getLiveModel } from '@/config/models.js';
 import { MemoryService } from '@/core/memory/MemoryService.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
+import { fastBase64Decode } from '@/utils/base64.js';
 
 // Interface for events emitted by ServerLiveSession
 export interface ServerLiveSessionEvents {
@@ -239,8 +240,7 @@ export class ServerLiveSession extends EventEmitter {
       for (const part of message.serverContent.modelTurn.parts) {
         if (part.inlineData?.data) {
           // Received Audio from Gemini -> Emit to WebSocket
-          const pcmData = Buffer.from(part.inlineData.data, 'base64');
-          console.log(`🔊 Gemini Audio: ${pcmData.length} bytes`);
+          const pcmData = fastBase64Decode(part.inlineData.data);
           this.emit('audio', pcmData);
         }
         if (part.text) {
