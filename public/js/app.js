@@ -111,6 +111,9 @@ async function init() {
     // Show logout button
     if (logoutBtn) logoutBtn.classList.remove('hidden');
 
+    // 通知履歴を初期ロード
+    fetchNotifications();
+
     // Initial scroll to bottom
     if (UI.chatHistory) {
       setTimeout(() => {
@@ -199,6 +202,76 @@ function urlBase64ToUint8Array(base64String) {
   }
   return outputArray;
 }
+
+/**
+ * 通知履歴をフェッチしてUIを更新する
+ */
+async function fetchNotifications() {
+  try {
+    const res = await fetch('/api/notifications');
+    if (res.ok) {
+      const { notifications } = await res.json();
+      UI.renderNotifications(notifications, markAsRead);
+    }
+  } catch (err) {
+    console.error('Failed to fetch notifications:', err);
+  }
+}
+
+/**
+ * 通知を既読にする
+ * @param {string} id - 通知ID
+ */
+async function markAsRead(id) {
+  try {
+    const res = await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+    if (res.ok) {
+      fetchNotifications(); // 再フェッチしてUI更新
+    }
+  } catch (err) {
+    console.error('Failed to mark notification as read:', err);
+  }
+}
+
+/**
+ * 全ての通知を既読にする
+ */
+async function markAllAsRead() {
+  try {
+    const res = await fetch('/api/notifications/read-all', { method: 'POST' });
+    if (res.ok) {
+      fetchNotifications();
+    }
+  } catch (err) {
+    console.error('Failed to mark all notifications as read:', err);
+  }
+}
+
+// ==========================================
+// Notification UI Event Listeners
+// ==========================================
+if (UI.notificationBtn) {
+  UI.notificationBtn.addEventListener('click', () => {
+    if (UI.notificationDialog) {
+      fetchNotifications(); // 開くときに最新をフェッチ
+      UI.notificationDialog.showModal();
+    }
+  });
+}
+
+if (UI.closeNotificationBtn) {
+  UI.closeNotificationBtn.addEventListener('click', () => {
+    if (UI.notificationDialog) UI.notificationDialog.close();
+  });
+}
+
+if (UI.readAllBtn) {
+  UI.readAllBtn.addEventListener('click', markAllAsRead);
+}
+
+// WebSocket で通知が届いた時も履歴を更新
+// ... existing ws.onmessage handles proactive_message,
+// fetchNotifications() を追加で呼ぶように修正する
 
 init();
 
@@ -384,6 +457,7 @@ async function startConnection() {
                 // 自律型通知: Claris が自発的に話しかけてきた！
                 UI.appendMessage(msg.text, 'ai');
                 UI.showToast(msg.text, msg.priority);
+                fetchNotifications(); // 履歴を更新
               } else {
                 UI.log(`Server: ${event.data}`);
               }

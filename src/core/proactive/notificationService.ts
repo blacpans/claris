@@ -5,6 +5,7 @@
  */
 
 import type { WebSocket } from 'ws';
+import { notificationHistoryService } from './notificationHistoryService.js';
 import { PushService } from './pushService.js';
 import type { ClarisEvent, ProactiveNotification } from './types.js';
 
@@ -50,8 +51,21 @@ export class NotificationService {
    * WebSocket 接続があればそちらを使い、なければ Web Push にフォールバック
    */
   notify(userId: string, event: ClarisEvent, message: string): boolean {
+    const notification: ProactiveNotification = {
+      type: 'proactive_message',
+      text: message,
+      source: event.source,
+      priority: event.priority,
+      timestamp: Date.now(),
+    };
+
+    // どの経路で送るかに関わらず、まずは履歴に保存！📜✨
+    notificationHistoryService.saveNotification(userId, notification).catch((err) => {
+      console.error('📜 Failed to save notification to history:', err);
+    });
+
     // 1. WebSocket で送信を試みる
-    const sentViaWs = this.sendViaWebSocket(userId, event, message);
+    const sentViaWs = this.sendViaWebSocket(userId, notification);
 
     if (sentViaWs) {
       return true;
@@ -75,19 +89,11 @@ export class NotificationService {
   /**
    * WebSocket 経由で通知を送信する
    */
-  private sendViaWebSocket(userId: string, event: ClarisEvent, message: string): boolean {
+  private sendViaWebSocket(userId: string, notification: ProactiveNotification): boolean {
     const sockets = this.connections.get(userId);
     if (!sockets || sockets.size === 0) {
       return false;
     }
-
-    const notification: ProactiveNotification = {
-      type: 'proactive_message',
-      text: message,
-      source: event.source,
-      priority: event.priority,
-      timestamp: Date.now(),
-    };
 
     const payload = JSON.stringify(notification);
     let sent = false;
@@ -101,7 +107,7 @@ export class NotificationService {
     }
 
     if (sent) {
-      console.log(`📲 Notification sent via WebSocket to ${userId}: ${message.slice(0, 50)}...`);
+      console.log(`📲 Notification sent via WebSocket to ${userId}: ${notification.text.slice(0, 50)}...`);
     }
 
     return sent;
