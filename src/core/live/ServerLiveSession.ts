@@ -90,7 +90,8 @@ export class ServerLiveSession extends EventEmitter {
     const memory = await this.loadMemory(userId);
     console.log(`🧠 Memory Loaded: ${memory.length} characters`);
 
-    const config = generateLiveSessionConfig(process.env.CLARIS_NAME || 'Claris', memory);
+    // ライブセッションでは常に「Claris」として振る舞うじゃんね！🌸✨
+    const config = generateLiveSessionConfig('Claris', memory);
 
     try {
       // biome-ignore lint/suspicious/noExplicitAny: SDK types for Live API are currently incomplete

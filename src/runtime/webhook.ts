@@ -89,8 +89,9 @@ async function handlePullRequestEvent(
   try {
     // Add claris-bot as reviewer (only on opened)
     if (action === 'opened') {
-      console.log('👥 Adding claris-bot as reviewer...');
-      await addReviewer({ repo, prNumber, reviewer: 'claris-bot' });
+      const botName = process.env.CLARIS_NAME || 'claris-bot';
+      console.log(`👥 Adding ${botName} as reviewer...`);
+      await addReviewer({ repo, prNumber, reviewer: botName });
     }
 
     // Fetch PR diff
