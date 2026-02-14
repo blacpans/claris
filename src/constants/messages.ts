@@ -73,7 +73,7 @@ export const MESSAGES = {
             }
 
             .card {
-              background: rgba(255, 255, 255, 0.6);
+              background: rgba(255, 255, 255, 0.3);
               backdrop-filter: blur(24px);
               -webkit-backdrop-filter: blur(24px);
               padding: 3rem 2rem;
