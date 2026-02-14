@@ -10,28 +10,28 @@ Claris を単なる「便利ツール」から、常に開発者に寄り添う�
 ## 🗺️ マイルストーン (Milestones)
 
 ### Lv.1：賢い「通訳」さん（コマンド代行）🤖
-**現状:** ✅ ほぼ達成（GitHub操作、PRレビューなど）
+**現状:** ✅ 達成（GitHub操作、Google Calendar 連携、CLI runnerなど）
 **Next Steps:**
-- GitHub 以外の操作（Google Calendar, Gmail連携）
-- 自然言語でのコマンド生成・実行（例: `claris "明日の予定教えて"`）
+- Gmail / Sheets 連携の強化
+- 自然言語でのコマンド生成・実行の精度向上
 - **技術:** Cloud Run + ADK (Current)
 
 ### Lv.2：空気が読める「参謀」（コンテキスト理解）🧠
-**現状:** 🔺 一部着手（webhook での PR 自動レビュー）
+**現状:** ✅ 達成（能動的な通知機能、長期記憶、PR 自動レビュー）
 **Goal:** エラーや状況を自律的に判断して提案する。
 **Next Steps:**
 - **自律的なエラー復旧提案**: ビルドエラーログを tail して解析 → `claris fix` で修正案提示
-- **状況認識**: `claris status` で「未読メール」「PRレビュー待ち」「次の会議」をまとめて提示
+- **長期記憶の活用**: 過去のデバッグ経験を活かした提案
 
 ### Lv.3：常駐する「相棒」（自律・人格・音声）🗣️
 **Goal:** 常にそこにいて、向こうから話しかけてくる。リアルタイム音声対話。
-**現状:** 🚧 Lv.3.1 達成 (CLIでのNative/VoiceVox会話機能実装済み)
+**現状:** ✅ Lv.3.1 達成 (Multimodal Live API によるリアルタイム音声対話実装済み)
 **技術スタック:**
-- **脳 (Brain):** Cloud Run + ADK + **Gemini 2.0 (Multimodal Live API)**
+- **脳 (Brain):** Cloud Run + ADK + **Gemini Multimodal Live API**
 - **耳と口 (Interface):**
   - **PC:** CLI (`claris live`) - ✅ Implemented (Native/VoiceVox)
   - **Mobile:** Flutter / PWA (WebSocket で音声ストリーミング) - 🚧 Next
-- **神経 (Notification):** Firebase Cloud Messaging (FCM)
+- **神経 (Notification):** Web Push / Firebase Cloud Messaging (FCM)
 
 ## 🛠️ 技術戦略 (Tech Stack Strategy)
 
@@ -57,7 +57,3 @@ AI から人間への「割り込み」を実現する。
 2. **[DONE] ADK の活用**: `LiveSession` クラスによるストリーミング実装完了
 3. **[NEXT] Google連携**: Calendar / Gmail API を使えるようにツールを追加する
 4. **[NEXT] Mobileアプリ化**: CLIのロジックをベースに、スマホから話しかけられるようにする
-
----
-> 「需要あるかな…」なんて悩んでる場合じゃないよ先輩！
-> これ使って**「自分専用の最強ネットナビ」**作って、ハッカソンでドヤ顔しちゃおうよ！😎✨

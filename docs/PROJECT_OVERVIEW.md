@@ -22,38 +22,48 @@
 ## 🏗️ アーキテクチャ
 
 ```mermaid
-graph LR
-    A[GitHub Webhook] --> B[Cloud Run - Hono Server]
-    B --> C[ADK Runner]
-    C --> D[Gemini 3 Pro Preview]
-    C --> E[Firestore Sessions]
-    B --> F[GitHub API - Post Comment]
-    
-    subgraph CLI[Local CLI]
-        G[User Voice] --> H[AudioRecorder]
-        H --> I[LiveSession]
-        I --WebSocket--> J[Gemini Multimodal Live API]
-        J --Audio/Text--> I
-        I --> K[AudioPlayer/VoiceVox]
-        K --> L[Speaker]
+graph TD
+    subgraph GitHub
+        W[Webhook] --> WH[Webhook Handler]
+    end
+
+    subgraph "Claris Core (Cloud Run)"
+        WH --> R[ADK Runner]
+        R --> A[Claris Agent]
+        A --> T[ADK Tools]
+        T --> G[GitHub API / Google API]
+        
+        PA[Proactive Agent] --> EC[Event Collector]
+        EC --> EQ[Event Queue]
+        EQ --> NS[Notification Service]
+        NS --> PS[Push Service]
+        
+        MS[Memory Service] <--> FS[(Firestore Vector Search)]
+        A <--> MS
+    end
+
+    subgraph "CLI / Frontend"
+        U[User] --> CLI[CLI - claris live/chat]
+        CLI <--> LS[Live Session]
+        LS --WebSocket--> SL[Server Live Session]
+        SL <--> LAPI[Gemini Multimodal Live API]
+        PS --WebPush--> PWA[Web UI / Notifications]
     end
 ```
 
-### 主要ファイル
+### 主要ディレクトリ構成
 
-### 主要ファイル
-
-| ファイル | 役割 |
+| ディレクトリ | 役割 |
 |:---------|:-----|
-| `src/index.ts` | エントリーポイント |
-| `src/runtime/server.ts` | Hono HTTP サーバー |
-| `src/runtime/webhook.ts` | GitHub Webhook ハンドラー |
-| `src/runtime/runner.ts` | ADK Runner (セッション管理) |
-| `src/agents/claris.ts` | Claris エージェント定義 |
-| `src/sessions/firestoreSession.ts` | Firestore セッション永続化 |
-| `src/tools/git/github.ts` | GitHub API ツール群 |
-| `src/core/live/LiveSession.ts` | CLI音声モード (`claris live`) |
-| `src/core/voice/*` | 音声録音・再生 (Native/VoiceVox) |
+| `src/agents/` | エージェントの性格定義やプロンプト管理 |
+| `src/cli/` | `claris` コマンドの実装（auth, chat, live 等） |
+| `src/core/` | システムの中核（Live, Memory, Proactive, Auth 等） |
+| `src/tools/` | ADK を使った外部連携ツール（Git, Google API 等） |
+| `src/runtime/` | サーバー、Webhook、WebSocket などのランタイム処理 |
+| `src/config/` | 環境変数やモデル、デフォルト値の設定 |
+| `src/sessions/` | Firestore を使ったセッション永続化 |
+| `src/constants/` | メッセージ文言などの定数管理 |
+| `src/utils/` | 共通ユーティリティ |
 
 ---
 
