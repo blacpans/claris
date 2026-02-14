@@ -49,3 +49,15 @@ export interface ProactiveNotification {
   /** 送信時刻 */
   timestamp: number;
 }
+/**
+ * 通知履歴の項目
+ * Firestore に保存される形式
+ */
+export interface NotificationHistoryItem extends ProactiveNotification {
+  /** 通知のID (FirestoreのドキュメントID) */
+  id?: string;
+  /** 対象ユーザーID */
+  userId: string;
+  /** 既読フラグ */
+  isRead: boolean;
+}

@@ -5,6 +5,7 @@
  */
 
 import type { WebSocket } from 'ws';
+import { notificationHistoryService } from './notificationHistoryService.js';
 import { PushService } from './pushService.js';
 import type { ClarisEvent, ProactiveNotification } from './types.js';
 
@@ -99,6 +100,11 @@ export class NotificationService {
         sent = true;
       }
     }
+
+    // WebSocket で送信できたかに関わらず、履歴には保存する
+    notificationHistoryService.saveNotification(userId, notification).catch((err) => {
+      console.error('📜 Failed to save notification to history (WS path):', err);
+    });
 
     if (sent) {
       console.log(`📲 Notification sent via WebSocket to ${userId}: ${message.slice(0, 50)}...`);

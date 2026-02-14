@@ -7,7 +7,12 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { MESSAGES } from '@/constants/messages.js';
 import { logout as clearSession, getSession, setSession } from '@/core/auth/SessionManager.js';
-import { notificationService } from '@/core/proactive/index.js';
+import {
+  type ClarisEvent,
+  type EventSource,
+  notificationHistoryService,
+  notificationService,
+} from '@/core/proactive/index.js';
 import { getAuthUrl, handleAuthCallback } from '@/tools/google/auth.js';
 import { adkRunner } from './runner.js';
 import { webhookApp } from './webhook.js';
@@ -227,6 +232,61 @@ app.delete('/api/push/subscribe', async (c) => {
     console.error('Push unsubscribe error:', error);
     return c.json({ error: 'Failed to remove subscription' }, 500);
   }
+});
+
+// --- Notification History API ---
+
+// 通知履歴を取得する
+app.get('/api/notifications', async (c) => {
+  const userId = await getSession(c);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const limit = Number(c.req.query('limit')) || 20;
+  const notifications = await notificationHistoryService.getNotifications(userId, limit);
+  return c.json({ notifications });
+});
+
+// 特定の通知を既読にする
+app.post('/api/notifications/:id/read', async (c) => {
+  const userId = await getSession(c);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const success = await notificationHistoryService.markAsRead(userId, id);
+  return c.json({ success });
+});
+
+// 全ての通知を既読にする
+app.post('/api/notifications/read-all', async (c) => {
+  const userId = await getSession(c);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const count = await notificationHistoryService.markAllAsRead(userId);
+  return c.json({ success: true, count });
+});
+
+// --- Debug API (Development Only) ---
+
+// テスト通知を送信する (GETでお手軽に送信できるようにしたじゃんね！✨)
+app.get('/api/debug/test-notification', async (c) => {
+  const userId = (await getSession(c)) || 'anonymous';
+
+  const text = c.req.query('text') || 'これはテスト通知だよ！✨🌸';
+  const source = (c.req.query('source') || 'system') as unknown as EventSource;
+
+  const debugEvent: ClarisEvent = {
+    id: `debug-${Date.now()}`,
+    source,
+    type: 'debug_notification',
+    priority: 'medium',
+    summary: text,
+    timestamp: Date.now(),
+    metadata: {},
+  };
+
+  notificationService.notify(userId, debugEvent, text);
+
+  return c.json({ success: true, userId, text, source });
 });
 
 // Mount webhook handler

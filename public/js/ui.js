@@ -7,6 +7,12 @@ export const liveBtn = document.getElementById('live-btn');
 export const sendBtn = document.getElementById('send-btn');
 export const loginOverlay = document.getElementById('login-overlay');
 export const loginButton = document.getElementById('login-button');
+export const notificationBtn = document.getElementById('notification-btn');
+export const notificationBadge = document.getElementById('notification-badge');
+export const notificationDialog = document.getElementById('notification-dialog');
+export const notificationList = document.getElementById('notification-list');
+export const closeNotificationBtn = document.getElementById('close-notification-btn');
+export const readAllBtn = document.getElementById('read-all-btn');
 
 let loadingDiv = null;
 
@@ -170,4 +176,78 @@ export function showToast(text, priority = 'medium') {
     toast.classList.add('-translate-y-20', 'opacity-0');
     toast.addEventListener('transitionend', () => toast.remove());
   }, 5000);
+}
+
+/**
+ * 通知履歴をレンダリングする
+ * @param {Array} notifications - 通知履歴のリスト
+ * @param {Function} onRead - 通知をクリックした時のコールバック
+ */
+export function renderNotifications(notifications, onRead) {
+  if (!notificationList) return;
+
+  if (notifications.length === 0) {
+    notificationList.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 opacity-50 grayscale">
+                <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                </div>
+                <p class="text-sm font-medium">通知はないよ！✨</p>
+            </div>
+        `;
+    if (notificationBadge) notificationBadge.classList.add('hidden');
+    return;
+  }
+
+  // ソースに応じたアイコンの定義
+  const iconMap = {
+    system:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.72l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+    github:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>',
+    chat: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>',
+    decision_engine:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  };
+
+  // 未読があるか確認してバッジを更新
+  const hasUnread = notifications.some((n) => !n.isRead);
+  if (notificationBadge) {
+    if (hasUnread) {
+      notificationBadge.classList.remove('hidden');
+    } else {
+      notificationBadge.classList.add('hidden');
+    }
+  }
+
+  notificationList.innerHTML = '';
+  notifications.forEach((n) => {
+    const item = document.createElement('div');
+    item.className = `notification-item ${n.isRead ? '' : 'unread'}`;
+
+    const icon = iconMap[n.source.toLowerCase()] || iconMap.system;
+    const time = new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    item.innerHTML = `
+            <div class="icon-wrapper">
+                ${icon}
+            </div>
+            <div class="content">
+                <div class="meta">
+                    <span>${n.source}</span>
+                    <span>${time}</span>
+                </div>
+                <div class="text">${n.text}</div>
+            </div>
+            ${!n.isRead ? '<div class="notification-unread-dot"></div>' : ''}
+        `;
+
+    item.addEventListener('click', () => {
+      if (!n.isRead) {
+        onRead(n.id);
+      }
+    });
+
+    notificationList.appendChild(item);
+  });
 }
