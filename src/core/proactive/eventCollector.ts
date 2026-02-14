@@ -5,6 +5,7 @@
 
 import { EventQueue } from './eventQueue.js';
 import { notificationService } from './notificationService.js';
+import { ProactiveAgent } from './proactiveAgent.js';
 import type { ClarisEvent, EventSource } from './types.js';
 
 /**
@@ -12,9 +13,11 @@ import type { ClarisEvent, EventSource } from './types.js';
  */
 export class EventCollector {
   private queue: EventQueue;
+  private proactiveAgent: ProactiveAgent;
 
-  constructor(queue?: EventQueue) {
+  constructor(queue?: EventQueue, agent?: ProactiveAgent) {
     this.queue = queue || new EventQueue();
+    this.proactiveAgent = agent || new ProactiveAgent();
   }
 
   /**
@@ -33,8 +36,23 @@ export class EventCollector {
 
     for (const event of events) {
       if (this.queue.enqueue(event)) {
-        // 即時通知: Gmail は届いたらすぐ教えてあげたい
-        notificationService.notify(userId, event, `先輩！メールが来てるよ！📧✨\n${event.summary}`);
+        // AIによる通知判断 (非同期)
+        this.proactiveAgent
+          .evaluateEvent(event)
+          .then((result) => {
+            if (result.shouldNotify) {
+              // 優先度をAI判断で更新
+              const updatedEvent = { ...event, priority: result.priority };
+              notificationService.notify(
+                userId,
+                updatedEvent,
+                `先輩！${result.reason} (メール: ${event.metadata.from})\n${event.summary}`,
+              );
+            } else {
+              console.log(`🔕 Suppressed Gmail notification: ${result.reason}`);
+            }
+          })
+          .catch((err) => console.error('Error evaluating Gmail event:', err));
       }
     }
 
@@ -75,11 +93,19 @@ export class EventCollector {
     };
 
     if (this.queue.enqueue(event)) {
-      notificationService.notify(
-        userId,
-        event,
-        `先輩！${summary}✨\n${details.repo}${details.title ? ` - ${details.title}` : ''}`,
-      );
+      // AIによる通知判断 (非同期)
+      this.proactiveAgent
+        .evaluateEvent(event)
+        .then((result) => {
+          if (result.shouldNotify) {
+            // 優先度をAI判断で更新
+            const updatedEvent = { ...event, priority: result.priority };
+            notificationService.notify(userId, updatedEvent, `先輩！${result.reason}\n${updatedEvent.summary}`);
+          } else {
+            console.log(`🔕 Suppressed GitHub notification: ${result.reason}`);
+          }
+        })
+        .catch((err) => console.error('Error evaluating GitHub event:', err));
     }
 
     return event;
@@ -99,7 +125,19 @@ export class EventCollector {
       metadata: {},
     };
 
-    this.queue.enqueue(event);
+    if (this.queue.enqueue(event)) {
+      // スケジューライベントも評価対象にする
+      this.proactiveAgent.evaluateEvent(event).then((result) => {
+        if (result.shouldNotify) {
+          const updatedEvent = { ...event, priority: result.priority };
+          notificationService.notify(
+            'anonymous', // Scheduler events might not have specific userId context yet
+            updatedEvent,
+            `先輩！${result.reason}\n${summary}`,
+          );
+        }
+      });
+    }
     return event;
   }
 

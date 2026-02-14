@@ -25,7 +25,6 @@ async function checkAuth() {
       const data = await res.json();
       if (data.authenticated) {
         currentUserId = data.userId;
-        if (UI.loginOverlay.open) UI.loginOverlay.close();
         console.log(`🌸 Logged in as: ${currentUserId}`);
         return true;
       }
@@ -35,19 +34,38 @@ async function checkAuth() {
   }
 
   // Not authenticated
-  if (!UI.loginOverlay.open) UI.loginOverlay.showModal();
   return false;
 }
 
 // Bind Login Button
 if (UI.loginButton) {
-  UI.loginButton.addEventListener('click', () => {
+  UI.loginButton.addEventListener('click', async () => {
+    // Request notification permission on user interaction
+    await setupPushNotifications().catch((err) => console.error('Notification setup failed:', err));
     window.location.href = '/api/auth/login';
+  });
+}
+
+// Bind Logout Button
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    if (confirm('ログアウトする？🌸')) {
+      try {
+        await fetch('/api/auth/logout');
+        window.location.reload();
+      } catch (err) {
+        console.error('Logout failed:', err);
+      }
+    }
   });
 }
 
 // Initial Setup
 async function init() {
+  const loadingScreen = document.getElementById('loading-screen');
+  const appContainer = document.getElementById('app-container');
+
   // Fetch Config
   try {
     const res = await fetch('/api/config');
@@ -64,7 +82,121 @@ async function init() {
   console.log(`🌸 Claris Client ${config.version}`);
 
   // Auth Check
-  await checkAuth();
+  const isAuthenticated = await checkAuth();
+
+  // Hide loading screen
+  if (loadingScreen) {
+    loadingScreen.classList.add('hidden');
+    // Remove from DOM after transition (optional, but good for cleanup)
+    setTimeout(() => {
+      if (loadingScreen.parentNode) loadingScreen.parentNode.removeChild(loadingScreen);
+    }, 500);
+  }
+
+  if (isAuthenticated) {
+    // Show App UI with fade in
+    if (appContainer) {
+      // appContainer is display:flex via Tailwind classes (flex flex-col)
+      // Hidden via style="display:none" initially.
+      appContainer.style.display = '';
+
+      // Use requestAnimationFrame for smoother transition activation
+      requestAnimationFrame(() => {
+        appContainer.classList.remove('opacity-0');
+        appContainer.classList.add('opacity-100');
+      });
+    }
+
+    // Show logout button
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+
+    // Initial scroll to bottom
+    if (UI.chatHistory) {
+      setTimeout(() => {
+        UI.chatHistory.scrollTop = UI.chatHistory.scrollHeight;
+      }, 100); // Wait for layout
+    }
+
+    // Service Worker & Web Push 登録
+    if ('serviceWorker' in navigator) {
+      // Notification setup moved to user interaction (login/enable)
+      // await setupPushNotifications();
+    }
+  } else {
+    // Show Login Overlay
+    if (UI.loginOverlay && !UI.loginOverlay.open) {
+      UI.loginOverlay.showModal();
+    }
+  }
+}
+
+/**
+ * Service Worker を登録し、Web Push 通知の購読を設定する
+ */
+async function setupPushNotifications() {
+  try {
+    // Service Worker 登録
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log('📲 Service Worker registered:', registration.scope);
+
+    // 通知権限を要求
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('📲 Notification permission denied');
+      return;
+    }
+
+    // VAPID 公開鍵を取得
+    const vapidRes = await fetch('/api/push/vapid-key');
+    if (!vapidRes.ok) {
+      console.warn('📲 VAPID key not available');
+      return;
+    }
+    const { publicKey } = await vapidRes.json();
+
+    // 既存のサブスクリプションを確認
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      // 新しいサブスクリプションを作成
+      const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+      console.log('📲 Push subscription created');
+    }
+
+    // サーバーにサブスクリプション情報を送信
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUserId,
+        subscription: subscription.toJSON(),
+      }),
+    });
+    console.log('📲 Push subscription sent to server');
+  } catch (err) {
+    console.error('📲 Push setup failed:', err);
+  }
+}
+
+/**
+ * Base64 URL エンコードされた文字列を Uint8Array に変換する
+ * (VAPID 公開鍵の変換に必要)
+ * @param {string} base64String
+ * @returns {Uint8Array}
+ */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 init();
@@ -73,7 +205,7 @@ init();
 if (UI.messageInput) {
   UI.messageInput.addEventListener('input', function () {
     this.style.height = 'auto'; // Reset to calculate scrollHeight
-    const newHeight = Math.min(this.scrollHeight, 150); // Max height 150px
+    const newHeight = Math.max(48, Math.min(this.scrollHeight, 150)); // Min 48px, Max 150px
     this.style.height = `${newHeight}px`;
   });
 
@@ -87,6 +219,9 @@ if (UI.messageInput) {
       }
     }
   });
+
+  // Trigger resize on init to ensure correct height (handles browser restoration)
+  UI.messageInput.dispatchEvent(new Event('input'));
 }
 
 // Handle Text Chat
@@ -98,7 +233,9 @@ if (UI.inputArea) {
 
     UI.appendMessage(text, 'user');
     UI.messageInput.value = '';
-    UI.messageInput.style.height = '50px';
+
+    // Reset height to default (48px)
+    UI.messageInput.style.height = '48px';
 
     UI.showLoading();
 
@@ -335,7 +472,7 @@ function loopPlaybackState() {
   if (isConnected) {
     requestAnimationFrame(loopPlaybackState);
   } else {
-    if (UI.liveBtn) UI.liveBtn.style.boxShadow = 'none'; // Clear on disconnect
+    if (UI.liveBtn) UI.liveBtn.style.boxShadow = ''; // Clear on disconnect
   }
 }
 
@@ -362,11 +499,11 @@ async function populateMicSelectors() {
 
   const devices = await Audio.getAudioDevices();
   const optionsHTML =
-    '<option value="" disabled>Select Microphone...</option>' +
+    '<option value="" disabled class="bg-popover text-popover-foreground">Select Microphone...</option>' +
     devices
       .map((d) => {
         const selected = d.deviceId === selectedMicId ? 'selected' : '';
-        return `<option value="${d.deviceId}" ${selected}>${d.label || `Microphone ${d.deviceId.slice(0, 5)}...`}</option>`;
+        return `<option value="${d.deviceId}" ${selected} class="bg-popover text-popover-foreground">${d.label || `Microphone ${d.deviceId.slice(0, 5)}...`}</option>`;
       })
       .join('');
 
