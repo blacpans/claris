@@ -1,4 +1,4 @@
-import { performance } from 'perf_hooks';
+import { performance } from 'node:perf_hooks';
 import { fastBase64Decode } from '../src/utils/base64.js';
 
 function generateBase64(size: number): string {
@@ -19,7 +19,7 @@ function runBenchmark(label: string, str: string, iterations: number) {
   );
 }
 
-function runBenchmarkAlloc(label: string, str: string, iterations: number, size: number) {
+function _runBenchmarkAlloc(label: string, str: string, iterations: number, size: number) {
   const start = performance.now();
   for (let i = 0; i < iterations; i++) {
     const buf = Buffer.allocUnsafe(size);
@@ -47,7 +47,7 @@ function runBenchmarkFast(label: string, str: string, iterations: number) {
 }
 
 const sizes = [1024, 4096, 65536, 1048576]; // 1KB, 4KB, 64KB, 1MB
-const iterations = 10000;
+const _iterations = 10000;
 
 console.log('--- Benchmark: Buffer.from vs fastBase64Decode ---');
 for (const size of sizes) {

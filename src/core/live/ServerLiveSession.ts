@@ -33,6 +33,27 @@ interface LiveServerMessage {
   };
 }
 
+interface RealtimeMediaInput {
+  media: {
+    mimeType: string;
+    data: string;
+  };
+}
+
+interface GeminiLiveSession {
+  sendRealtimeInput: (input: RealtimeMediaInput) => Promise<void>;
+}
+
+interface LiveConnectParams {
+  model: string;
+  config: unknown;
+  callbacks: {
+    onmessage: (message: LiveServerMessage) => Promise<void>;
+    onerror: (err: unknown) => void;
+    onclose: (event: unknown) => void;
+  };
+}
+
 /**
  * Claris 固有のセッションイベント定義 🧠
  * ADK の Event 型を拡張して、会話履歴に必要な type と text を持たせるじゃんね！💎
@@ -50,8 +71,7 @@ interface ClarisSessionEvent extends Event {
  */
 export class ServerLiveSession extends EventEmitter {
   private client: GoogleGenAI;
-  // using unknown to avoid 'any' for internal SDK session type
-  private session: unknown = null;
+  private session: GeminiLiveSession | null = null;
   private sessionService: FirestoreSessionService;
   private memoryService: MemoryService;
   private currentSessionId: string | null = null;
@@ -101,13 +121,15 @@ export class ServerLiveSession extends EventEmitter {
     const config = generateLiveSessionConfig('Claris', memory, soulPrompt);
 
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: SDK types for Live API are currently incomplete
-      this.session = await (this.client as any).live.connect({
+      const liveClient = (
+        this.client as unknown as { live: { connect: (params: LiveConnectParams) => Promise<GeminiLiveSession> } }
+      ).live;
+      this.session = await liveClient.connect({
         model: model,
         config: config,
         callbacks: {
-          onmessage: async (message: unknown) => {
-            await this.handleMessage(message as LiveServerMessage);
+          onmessage: async (message: LiveServerMessage) => {
+            await this.handleMessage(message);
           },
           onerror: (err: unknown) => {
             console.error('❌ Session Error:', JSON.stringify(err, null, 2));
@@ -205,9 +227,7 @@ export class ServerLiveSession extends EventEmitter {
   private async sendAudioInternal(inputAudioPCM: Buffer) {
     if (!this.session) return;
     try {
-      await (
-        this.session as { sendRealtimeInput: (arg: { media: { mimeType: string; data: string } }) => Promise<void> }
-      ).sendRealtimeInput({
+      await this.session.sendRealtimeInput({
         media: {
           mimeType: 'audio/pcm;rate=16000',
           data: inputAudioPCM.toString('base64'),
@@ -306,7 +326,7 @@ export class ServerLiveSession extends EventEmitter {
         console.log(`💾 Saving ${this.eventsBuffer.length} events to Firestore...`);
         const session: Session = {
           id: this.currentSessionId,
-          appName: process.env.CLARIS_NAME || 'Claris',
+          appName: 'claris',
           userId: this.currentUserId,
           state: {},
           events: [],

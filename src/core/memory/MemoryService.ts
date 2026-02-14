@@ -174,7 +174,7 @@ export class MemoryService {
       if (currentChunkLength + len > maxLength) {
         if (currentChunkLength > 0) {
           const chunkLines = lines.slice(currentChunkStartLineIndex, i);
-          chunks.push(chunkLines.join('\n') + '\n');
+          chunks.push(`${chunkLines.join('\n')}\n`);
         }
         currentChunkStartLineIndex = i;
         currentChunkLength = len;
@@ -185,7 +185,7 @@ export class MemoryService {
 
     if (currentChunkLength > 0) {
       const chunkLines = lines.slice(currentChunkStartLineIndex);
-      chunks.push(chunkLines.join('\n') + '\n');
+      chunks.push(`${chunkLines.join('\n')}\n`);
     }
 
     // Fallback: if a single line is massive (unlikely in chat logs but possible), split strictly
