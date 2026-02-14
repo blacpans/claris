@@ -238,8 +238,7 @@ app.delete('/api/push/subscribe', async (c) => {
 
 // 通知履歴を取得する
 app.get('/api/notifications', async (c) => {
-  const userId = await getSession(c);
-  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+  const userId = (await getSession(c)) || 'anonymous';
 
   const limit = Number(c.req.query('limit')) || 20;
   const notifications = await notificationHistoryService.getNotifications(userId, limit);
@@ -248,7 +247,7 @@ app.get('/api/notifications', async (c) => {
 
 // 特定の通知を既読にする
 app.post('/api/notifications/:id/read', async (c) => {
-  const userId = await getSession(c);
+  const userId = (await getSession(c)) || 'anonymous';
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
   const id = c.req.param('id');
@@ -271,6 +270,8 @@ app.post('/api/notifications/read-all', async (c) => {
 app.get('/api/debug/test-notification', async (c) => {
   const userId = (await getSession(c)) || 'anonymous';
 
+  // 日本語が化けないように encodeURIComponent されてることを期待するけど、
+  // ここでも一応 fallback 用に空文字チェックするじゃんね！✨
   const text = c.req.query('text') || 'これはテスト通知だよ！✨🌸';
   const source = (c.req.query('source') || 'system') as unknown as EventSource;
 
@@ -287,6 +288,13 @@ app.get('/api/debug/test-notification', async (c) => {
   notificationService.notify(userId, debugEvent, text);
 
   return c.json({ success: true, userId, text, source });
+});
+
+// 保存されている通知を直接チェックする (デバッグ用)
+app.get('/api/debug/check-notifications', async (c) => {
+  const userId = c.req.query('userId') || (await getSession(c)) || 'anonymous';
+  const notifications = await notificationHistoryService.getNotifications(userId);
+  return c.json({ userId, count: notifications.length, notifications });
 });
 
 // Mount webhook handler

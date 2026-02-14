@@ -39,17 +39,15 @@ export class NotificationHistoryService {
    */
   async getNotifications(userId: string, limit = 20): Promise<NotificationHistoryItem[]> {
     try {
-      const snapshot = await this.db
-        .collection(this.collectionName)
-        .where('userId', '==', userId)
-        .orderBy('timestamp', 'desc')
-        .limit(limit)
-        .get();
+      const snapshot = await this.db.collection(this.collectionName).where('userId', '==', userId).limit(limit).get();
 
-      return snapshot.docs.map((doc) => ({
+      const notifications = snapshot.docs.map((doc) => ({
         ...(doc.data() as NotificationHistoryItem),
         id: doc.id,
       }));
+
+      // メモリ上でソートする（Composite Index 未作成によるエラーを回避）
+      return notifications.sort((a, b) => b.timestamp - a.timestamp);
     } catch (e) {
       console.error('📜 Failed to fetch notification history:', e);
       return [];
