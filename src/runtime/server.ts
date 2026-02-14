@@ -268,12 +268,16 @@ app.post('/api/notifications/read-all', async (c) => {
 
 // テスト通知を送信する (GETでお手軽に送信できるようにしたじゃんね！✨)
 app.get('/api/debug/test-notification', async (c) => {
-  const userId = (await getSession(c)) || 'anonymous';
+  // 1. クエリパラメータで指定された ID
+  // 2. セッションの ID
+  // 3. デフォルトの anonymous
+  const userId = c.req.query('targetUserId') || (await getSession(c)) || 'anonymous';
 
   // 日本語が化けないように encodeURIComponent されてることを期待するけど、
   // ここでも一応 fallback 用に空文字チェックするじゃんね！✨
   const text = c.req.query('text') || 'これはテスト通知だよ！✨🌸';
   const source = (c.req.query('source') || 'system') as unknown as EventSource;
+  const broadcast = c.req.query('broadcast') === 'true';
 
   const debugEvent: ClarisEvent = {
     id: `debug-${Date.now()}`,
@@ -285,9 +289,15 @@ app.get('/api/debug/test-notification', async (c) => {
     metadata: {},
   };
 
-  notificationService.notify(userId, debugEvent, text);
+  if (broadcast) {
+    console.log(`📡 GET /api/debug/test-notification: Broad-casting to all users! text=${text}`);
+    notificationService.broadcast(debugEvent, text);
+  } else {
+    console.log(`📡 GET /api/debug/test-notification: userId=${userId}, source=${source}, text=${text}`);
+    notificationService.notify(userId, debugEvent, text);
+  }
 
-  return c.json({ success: true, userId, text, source });
+  return c.json({ success: true, userId, text, source, broadcast });
 });
 
 // 保存されている通知を直接チェックする (デバッグ用)
