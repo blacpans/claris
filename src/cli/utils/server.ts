@@ -27,8 +27,8 @@ export async function startServer(options: { detached?: boolean; stdio?: StdioOp
 
   const subprocess = spawn(command, args, {
     cwd: projectRoot,
-    detached: options.detached ?? true,
-    stdio: options.stdio ?? 'ignore',
+    detached: options.detached ?? false,
+    stdio: options.stdio ?? 'inherit',
     env,
   });
 
