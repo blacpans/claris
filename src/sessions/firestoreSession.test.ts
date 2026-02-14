@@ -105,4 +105,49 @@ describe('FirestoreSessionService', () => {
     // This should FAIL if the optimization is missing
     expect(executedQuery.limit).toHaveBeenCalledWith(10);
   });
+
+  it('should fetch events in getLatestSession when config is provided', async () => {
+    // Setup getLatestSession query mock
+    const latestSessionQuery = createMockQuery('latestSessionQuery');
+    latestSessionQuery.get.mockResolvedValue({
+      docs: [
+        {
+          exists: true,
+          data: () => ({ id: 's1', appName: 'testApp', userId: 'testUser', lastUpdateTime: 123 }),
+          // The ref needs to return a collection so _fetchEvents can query it
+          ref: {
+            collection: vi.fn().mockReturnValue(mockCollection),
+          },
+        },
+      ],
+    });
+
+    // Ensure the chain works for getLatestSession
+    mockCollection.where.mockReturnValue(latestSessionQuery);
+    latestSessionQuery.where.mockReturnValue(latestSessionQuery);
+    latestSessionQuery.orderBy.mockReturnValue(latestSessionQuery);
+    latestSessionQuery.limit.mockReturnValue(latestSessionQuery);
+
+    const config = { numRecentEvents: 5 };
+    const session = await service.getLatestSession({ appName: 'testApp', userId: 'testUser', config });
+
+    expect(session).not.toBeNull();
+    // Since we mocked mockCollection to return 'limitQuery' on limit(), and _fetchEvents calls limit(),
+    // we should see a limitQuery executed.
+
+    // Find queries created AFTER the initial session fetch
+    // The session fetch query is 'latestSessionQuery'.
+    // The events fetch query should be one of the 'orderByQuery' or 'limitQuery' created by mockCollection.
+
+    // Check if limit(5) was called on one of the queries
+    // Since we chain orderBy().limit(), the limit is called on the query returned by orderBy
+    const orderByQueries = createdQueries.filter((q) => q._name === 'orderByQuery');
+
+    const limitCalled = orderByQueries.some((q) => {
+      // Check if limit was called with 5
+      return q.limit.mock.calls.some((args) => args[0] === 5);
+    });
+
+    expect(limitCalled).toBe(true);
+  });
 });

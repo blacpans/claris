@@ -146,21 +146,9 @@ export class ServerLiveSession extends EventEmitter {
       }
 
       // 2. Short-term Memory (Recent Session)
-      const latestSessionSummary = await this.sessionService.getLatestSession({
+      const session = await this.sessionService.getLatestSession({
         appName: 'claris',
         userId: userId,
-      });
-
-      if (!latestSessionSummary) {
-        // user 'anonymous' fallback removed for privacy
-        return `${longTermMemory}No previous conversation history.`.trim();
-      }
-
-      // Fetch full session details
-      const session = await this.sessionService.getSession({
-        appName: 'claris',
-        userId: userId,
-        sessionId: latestSessionSummary.id,
         config: { numRecentEvents: 20 },
       });
 

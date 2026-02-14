@@ -15,7 +15,7 @@ import type {
   ListSessionsResponse,
   Session,
 } from '@google/adk';
-import { type CollectionReference, Firestore, type Query } from '@google-cloud/firestore';
+import { type CollectionReference, type DocumentReference, Firestore, type Query } from '@google-cloud/firestore';
 
 const DEFAULT_EVENT_LIMIT = 1000;
 
@@ -74,42 +74,7 @@ export class FirestoreSessionService {
       events: [],
     };
 
-    // Fetch events from subcollection
-    let query = docRef.collection('events').orderBy('timestamp', 'asc');
-
-    // Apply optional filters
-    if (request.config?.afterTimestamp) {
-      query = query.where('timestamp', '>', request.config.afterTimestamp);
-    }
-
-    // Prevent unbounded fetches by applying a default limit if no specific limit is requested
-    if (!request.config?.numRecentEvents) {
-      query = query.limit(DEFAULT_EVENT_LIMIT);
-    }
-
-    // Note: limitToLast is more efficient for "recent items" but tricky with 'asc' sort if we want the *very* last ones.
-    // If we want the last N events: orderBy('timestamp', 'desc').limit(N) -> then reverse.
-    if (request.config?.numRecentEvents) {
-      let recentQuery: Query = docRef.collection('events');
-
-      if (request.config?.afterTimestamp) {
-        recentQuery = recentQuery.where('timestamp', '>', request.config.afterTimestamp);
-      }
-
-      recentQuery = recentQuery.orderBy('timestamp', 'desc').limit(request.config.numRecentEvents);
-
-      const snapshot = await recentQuery.get();
-      session.events = snapshot.docs.map((d) => d.data() as Event).reverse();
-      return session;
-    }
-
-    const snapshot = await query.get();
-    session.events = snapshot.docs.map((d) => d.data() as Event);
-
-    // If both applied and we fell back to 'asc' query, slice locally (though less efficient)
-    if (request.config?.numRecentEvents && session.events.length > request.config.numRecentEvents) {
-      session.events = session.events.slice(-request.config.numRecentEvents);
-    }
+    session.events = await this._fetchEvents(docRef, request.config);
 
     return session;
   }
@@ -123,7 +88,11 @@ export class FirestoreSessionService {
    * - userId (ASC)
    * - lastUpdateTime (DESC)
    */
-  async getLatestSession(request: { appName: string; userId: string }): Promise<Session | null> {
+  async getLatestSession(request: {
+    appName: string;
+    userId: string;
+    config?: { numRecentEvents?: number; afterTimestamp?: number };
+  }): Promise<Session | null> {
     const snapshot = await this.db
       .collection(this.collectionName)
       .where('appName', '==', request.appName)
@@ -138,9 +107,11 @@ export class FirestoreSessionService {
     }
 
     const data = doc.data() as Session;
+    const events = request.config ? await this._fetchEvents(doc.ref, request.config) : [];
+
     return {
       ...data,
-      events: [],
+      events,
     };
   }
 
@@ -195,6 +166,52 @@ export class FirestoreSessionService {
 
     // Delete parent doc
     await docRef.delete();
+  }
+
+  /**
+   * Helper to fetch events for a session
+   */
+  private async _fetchEvents(
+    docRef: DocumentReference,
+    config?: { numRecentEvents?: number; afterTimestamp?: number },
+  ): Promise<Event[]> {
+    // Fetch events from subcollection
+    let query = docRef.collection('events').orderBy('timestamp', 'asc');
+
+    // Apply optional filters
+    if (config?.afterTimestamp) {
+      query = query.where('timestamp', '>', config.afterTimestamp);
+    }
+
+    // Prevent unbounded fetches by applying a default limit if no specific limit is requested
+    if (!config?.numRecentEvents) {
+      query = query.limit(DEFAULT_EVENT_LIMIT);
+    }
+
+    // Note: limitToLast is more efficient for "recent items" but tricky with 'asc' sort if we want the *very* last ones.
+    // If we want the last N events: orderBy('timestamp', 'desc').limit(N) -> then reverse.
+    if (config?.numRecentEvents) {
+      let recentQuery: Query = docRef.collection('events');
+
+      if (config?.afterTimestamp) {
+        recentQuery = recentQuery.where('timestamp', '>', config.afterTimestamp);
+      }
+
+      recentQuery = recentQuery.orderBy('timestamp', 'desc').limit(config.numRecentEvents);
+
+      const snapshot = await recentQuery.get();
+      return snapshot.docs.map((d) => d.data() as Event).reverse();
+    }
+
+    const snapshot = await query.get();
+    let events = snapshot.docs.map((d) => d.data() as Event);
+
+    // If both applied and we fell back to 'asc' query, slice locally (though less efficient)
+    if (config?.numRecentEvents && events.length > config.numRecentEvents) {
+      events = events.slice(-config.numRecentEvents);
+    }
+
+    return events;
   }
 
   /**
