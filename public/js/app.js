@@ -8,7 +8,8 @@ let isConnected = false;
 let shouldReconnect = false;
 let currentUserId = null;
 let currentSessionId = null;
-let config = { version: 'v0.19.2', wsPath: '/ws/live' };
+// Use global config if available, otherwise fallback to defaults
+let config = window.CLARIS_CONFIG || { version: 'v0.0.0', wsPath: '/ws/live' };
 
 function getWebSocketUrl() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
