@@ -108,7 +108,7 @@ npm run dev
 |----------|-------------|
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud Project ID |
 | `GOOGLE_CLOUD_LOCATION` | Vertex AI Location (e.g., `us-central1`, `asia-northeast1`) |
-| `GEMINI_MODEL` | Default Gemini Model (e.g., `gemini-1.5-pro`) |
+| `GEMINI_MODEL` | Default Gemini Model (e.g., `gemini-2.5-pro`) |
 | `GITHUB_TOKEN` | GitHub Personal Access Token |
 | `GITHUB_WEBHOOK_SECRET` | GitHub Webhook Secret (Required for webhook) |
 | `FIRESTORE_COLLECTION` | Firestore Collection (e.g., `claris-sessions`) |
