@@ -1,7 +1,8 @@
+import { EventEmitter } from 'node:events';
+import type { Event, Session } from '@google/adk';
 import { GoogleGenAI, type Part } from '@google/genai';
 import { generateLiveSessionConfig } from '@/agents/prompts.js';
 import '@/config/env.js';
-import { EventEmitter } from 'node:events';
 import { getLiveModel } from '@/config/models.js';
 import { MemoryService } from '@/core/memory/MemoryService.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
@@ -30,11 +31,13 @@ interface LiveServerMessage {
   };
 }
 
-// Local interface for stored events to ensure type safety
-interface StoredEvent {
-  type: string;
+/**
+ * Claris 固有のセッションイベント定義 🧠
+ * ADK の Event 型を拡張して、会話履歴に必要な type と text を持たせるじゃんね！💎
+ */
+interface ClarisSessionEvent extends Event {
+  type: 'user-message' | 'model-response';
   text: string;
-  timestamp?: number;
 }
 
 /**
@@ -51,7 +54,7 @@ export class ServerLiveSession extends EventEmitter {
   private memoryService: MemoryService;
   private currentSessionId: string | null = null;
   private currentUserId: string = 'anonymous';
-  private eventsBuffer: StoredEvent[] = [];
+  private eventsBuffer: ClarisSessionEvent[] = [];
 
   // Audio Buffer for connection phase
   private audioQueue: Buffer[] = [];
@@ -161,10 +164,9 @@ export class ServerLiveSession extends EventEmitter {
         config: { numRecentEvents: 20 },
       });
 
-      if (!session || !('events' in session)) return `${longTermMemory}No previous conversation history.`.trim();
+      if (!session) return `${longTermMemory}No previous conversation history.`.trim();
 
-      // Cast to custom type that definitely has events
-      const events = (session as unknown as { events: StoredEvent[] }).events;
+      const events = (session.events || []) as ClarisSessionEvent[];
 
       // Format events to text
       const shortTermHistory = events
@@ -264,9 +266,17 @@ export class ServerLiveSession extends EventEmitter {
       const lastEvent = this.eventsBuffer[this.eventsBuffer.length - 1];
       if (!lastEvent || lastEvent.type !== 'user-message' || lastEvent.text !== text) {
         this.eventsBuffer.push({
+          id: `ev-${Date.now()}`,
           type: 'user-message',
           text,
           timestamp: Date.now(),
+          invocationId: '', // Live API doesn't have ADK invocation context here
+          actions: {
+            stateDelta: {},
+            artifactDelta: {},
+            requestedAuthConfigs: {},
+            requestedToolConfirmations: {},
+          },
         });
       }
     }
@@ -280,9 +290,17 @@ export class ServerLiveSession extends EventEmitter {
 
       if (modelText) {
         this.eventsBuffer.push({
+          id: `ev-${Date.now()}`,
           type: 'model-response',
           text: modelText,
           timestamp: Date.now(),
+          invocationId: '', // Live API doesn't have ADK invocation context here
+          actions: {
+            stateDelta: {},
+            artifactDelta: {},
+            requestedAuthConfigs: {},
+            requestedToolConfirmations: {},
+          },
         });
       }
     }
@@ -302,7 +320,7 @@ export class ServerLiveSession extends EventEmitter {
       if (this.eventsBuffer.length > 0 && this.currentSessionId) {
         // 1. 会話履歴の保存（短期記憶）
         console.log(`💾 Saving ${this.eventsBuffer.length} events to Firestore...`);
-        const session = {
+        const session: Session = {
           id: this.currentSessionId,
           appName: process.env.CLARIS_NAME || 'Claris',
           userId: this.currentUserId,
@@ -310,13 +328,10 @@ export class ServerLiveSession extends EventEmitter {
           events: [],
           lastUpdateTime: Date.now(),
         };
-        const events = this.eventsBuffer.map((e, index) => ({
+        const events: Event[] = this.eventsBuffer.map((e, index) => ({
           ...e,
-          id: `ls-${Date.now()}-${index}`,
-          invocationId: undefined,
-          actions: [],
+          id: e.id || `ls-${Date.now()}-${index}`,
         }));
-        // @ts-expect-error Types differ slightly but safe at runtime for Firestore
         await this.sessionService.appendEvents({ session, events });
 
         // 2. 要約の生成と保存（長期記憶）
