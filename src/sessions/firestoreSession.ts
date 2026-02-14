@@ -15,7 +15,7 @@ import type {
   ListSessionsResponse,
   Session,
 } from '@google/adk';
-import { Firestore } from '@google-cloud/firestore';
+import { type CollectionReference, Firestore, type Query } from '@google-cloud/firestore';
 
 const DEFAULT_EVENT_LIMIT = 1000;
 
@@ -90,21 +90,17 @@ export class FirestoreSessionService {
     // Note: limitToLast is more efficient for "recent items" but tricky with 'asc' sort if we want the *very* last ones.
     // If we want the last N events: orderBy('timestamp', 'desc').limit(N) -> then reverse.
     if (request.config?.numRecentEvents) {
-      const reversedQuery = docRef
-        .collection('events')
-        .orderBy('timestamp', 'desc')
-        .limit(request.config.numRecentEvents);
+      let recentQuery: Query = docRef.collection('events');
+
       if (request.config?.afterTimestamp) {
-        // Combining range and limit in reverse might be complex logic wise for 'afterTimestamp'
-        // For Review Mode (afterTimestamp), usually we want ALL events after X.
-        // For generic Context (numRecentEvents), we want last N.
-        // Let's stick to simple logic: Only apply one or the other, or fetch all and slice if complex.
-        // Given implementation plan: prioritize correct query.
-      } else {
-        const snapshot = await reversedQuery.get();
-        session.events = snapshot.docs.map((d) => d.data() as Event).reverse();
-        return session;
+        recentQuery = recentQuery.where('timestamp', '>', request.config.afterTimestamp);
       }
+
+      recentQuery = recentQuery.orderBy('timestamp', 'desc').limit(request.config.numRecentEvents);
+
+      const snapshot = await recentQuery.get();
+      session.events = snapshot.docs.map((d) => d.data() as Event).reverse();
+      return session;
     }
 
     const snapshot = await query.get();
@@ -205,10 +201,7 @@ export class FirestoreSessionService {
    * Helper to recursively delete a collection
    * Reference: https://firebase.google.com/docs/firestore/manage-data/delete-data#collections
    */
-  private async deleteCollection(
-    collectionRef: FirebaseFirestore.CollectionReference,
-    batchSize: number,
-  ): Promise<void> {
+  private async deleteCollection(collectionRef: CollectionReference, batchSize: number): Promise<void> {
     const query = collectionRef.orderBy('__name__').limit(batchSize);
     const snapshot = await query.get();
 
