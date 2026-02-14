@@ -3,6 +3,7 @@ import { log } from './ui.js';
 let audioContext;
 let processor;
 let inputSource;
+let currentStream;
 let activeSources = [];
 let nextStartTime = 0;
 let analyser;
@@ -33,6 +34,12 @@ export async function initAudioContext() {
 export function stopAudio() {
   if (processor) processor.disconnect();
   if (inputSource) inputSource.disconnect();
+  if (currentStream) {
+    currentStream.getTracks().forEach((track) => {
+      track.stop();
+    });
+    currentStream = null;
+  }
   if (audioContext) audioContext.close();
 
   interruptPlayback();
@@ -72,6 +79,7 @@ export async function startMicrophone(onAudioData, deviceId = null) {
     }
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream = stream;
 
     inputSource = audioContext.createMediaStreamSource(stream);
 
