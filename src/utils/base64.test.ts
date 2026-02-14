@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fastBase64Decode } from './base64.js';
 
 describe('fastBase64Decode', () => {
@@ -28,7 +28,7 @@ describe('fastBase64Decode', () => {
   it('should decode large string correctly', () => {
     // Reduce size to avoid timeout in deep equality check or large buffer generation
     const buf = Buffer.alloc(1024 * 64); // 64KB
-    for(let i=0; i<buf.length; i++) buf[i] = i % 256;
+    for (let i = 0; i < buf.length; i++) buf[i] = i % 256;
     const base64 = buf.toString('base64');
 
     const decoded = fastBase64Decode(base64);

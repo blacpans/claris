@@ -13,7 +13,7 @@ export function fastBase64Decode(str: string): Buffer {
   if (len > 1 && str.charCodeAt(len - 1) === 61) len--; // =
 
   // Base64 encoding: 4 chars -> 3 bytes
-  const size = Math.floor(len * 3 / 4);
+  const size = Math.floor((len * 3) / 4);
 
   const buf = Buffer.allocUnsafe(size);
   const bytesWritten = buf.write(str, 'base64');

@@ -14,7 +14,9 @@ function runBenchmark(label: string, str: string, iterations: number) {
   const end = performance.now();
   const total = end - start;
   const perOp = total / iterations;
-  console.log(`${label} (Buffer.from): ${iterations} iterations, Total: ${total.toFixed(2)}ms, Per Op: ${perOp.toFixed(4)}ms`);
+  console.log(
+    `${label} (Buffer.from): ${iterations} iterations, Total: ${total.toFixed(2)}ms, Per Op: ${perOp.toFixed(4)}ms`,
+  );
 }
 
 function runBenchmarkAlloc(label: string, str: string, iterations: number, size: number) {
@@ -26,7 +28,9 @@ function runBenchmarkAlloc(label: string, str: string, iterations: number, size:
   const end = performance.now();
   const total = end - start;
   const perOp = total / iterations;
-  console.log(`${label} (allocUnsafe manual): ${iterations} iterations, Total: ${total.toFixed(2)}ms, Per Op: ${perOp.toFixed(4)}ms`);
+  console.log(
+    `${label} (allocUnsafe manual): ${iterations} iterations, Total: ${total.toFixed(2)}ms, Per Op: ${perOp.toFixed(4)}ms`,
+  );
 }
 
 function runBenchmarkFast(label: string, str: string, iterations: number) {
@@ -37,7 +41,9 @@ function runBenchmarkFast(label: string, str: string, iterations: number) {
   const end = performance.now();
   const total = end - start;
   const perOp = total / iterations;
-  console.log(`${label} (fastBase64Decode): ${iterations} iterations, Total: ${total.toFixed(2)}ms, Per Op: ${perOp.toFixed(4)}ms`);
+  console.log(
+    `${label} (fastBase64Decode): ${iterations} iterations, Total: ${total.toFixed(2)}ms, Per Op: ${perOp.toFixed(4)}ms`,
+  );
 }
 
 const sizes = [1024, 4096, 65536, 1048576]; // 1KB, 4KB, 64KB, 1MB
