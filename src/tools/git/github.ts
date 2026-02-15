@@ -48,7 +48,17 @@ interface FetchDiffInput {
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
+    // If it's an Octokit error, it might have a response body with more details
+    const maybeOctokitError = error as Error & {
+      response?: { data?: { message?: string } };
+    };
+    if (maybeOctokitError.response?.data?.message) {
+      return `${error.message}: ${maybeOctokitError.response.data.message}`;
+    }
     return error.message;
+  }
+  if (typeof error === 'object' && error !== null) {
+    return JSON.stringify(error);
   }
   return String(error);
 }
