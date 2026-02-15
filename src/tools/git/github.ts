@@ -46,6 +46,13 @@ interface FetchDiffInput {
   prNumber: number;
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
 interface PostCommentInput {
   repo: string;
   prNumber: number;
@@ -93,8 +100,10 @@ export async function fetchDiff(input: FetchDiffInput): Promise<string> {
     });
 
     return filteredHelper.join('diff --git ');
-  } catch (error: any) {
-    return `Error fetching diff: ${error.message}`;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`Error fetching diff: ${message}`);
+    return `Error fetching diff: ${message}`;
   }
 }
 
@@ -121,8 +130,10 @@ export async function postComment(input: PostCommentInput): Promise<string> {
     });
 
     return `Comment posted: ${response.data.html_url}`;
-  } catch (error: any) {
-    return `Error posting comment: ${error.message}`;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`Error posting comment: ${message}`);
+    return `Error posting comment: ${message}`;
   }
 }
 
@@ -155,8 +166,10 @@ export async function listPRs(input: ListPRsInput): Promise<PRInfo[] | string> {
       state: pr.state,
       createdAt: pr.created_at,
     }));
-  } catch (error: any) {
-    return `Error listing PRs: ${error.message}`;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`Error listing PRs: ${message}`);
+    return `Error listing PRs: ${message}`;
   }
 }
 
@@ -204,8 +217,10 @@ export async function getPRDetails(input: FetchDiffInput): Promise<
       deletions: pr.deletions,
       changedFiles: pr.changed_files,
     };
-  } catch (error: any) {
-    return `Error getting PR details: ${error.message}`;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`Error getting PR details: ${message}`);
+    return `Error getting PR details: ${message}`;
   }
 }
 
@@ -252,9 +267,10 @@ export async function addReviewer(input: AddReviewerInput): Promise<string> {
       reviewers: [input.reviewer],
     });
     return `Reviewer ${input.reviewer} added to PR #${input.prNumber}`;
-  } catch (error: any) {
-    console.warn(`Could not add reviewer: ${error.message}`);
-    return `Could not add reviewer: ${error.message}`;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`Could not add reviewer: ${message}`);
+    return `Could not add reviewer: ${message}`;
   }
 }
 
@@ -282,8 +298,10 @@ export async function createReview(input: CreateReviewInput): Promise<string> {
     });
 
     return `Review created: ${response.data.html_url}`;
-  } catch (error: any) {
-    return `Error creating review: ${error.message}`;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`Error creating review: ${message}`);
+    return `Error creating review: ${message}`;
   }
 }
 
@@ -309,9 +327,10 @@ export async function addLabels(input: AddLabelsInput): Promise<string> {
       labels: input.labels,
     });
     return `Labels added: ${input.labels.join(', ')}`;
-  } catch (error: any) {
-    console.warn(`Could not add labels: ${error.message}`);
-    return `Could not add labels: ${error.message}`;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`Could not add labels: ${message}`);
+    return `Could not add labels: ${message}`;
   }
 }
 
