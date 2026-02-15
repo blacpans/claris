@@ -117,11 +117,10 @@ async function init() {
   const isAuthenticated = await checkAuth();
 
   // Handle Nav Login Button
-  const loginBtnNav = document.getElementById('login-button-nav');
+  const loginBtnNav = document.getElementById('login-btn-nav');
   if (loginBtnNav) {
     loginBtnNav.addEventListener('click', () => {
-      const loginModal = document.getElementById('login-modal');
-      if (loginModal) loginModal.showModal();
+      window.location.href = '/api/auth/login';
     });
   }
 
@@ -150,7 +149,10 @@ async function init() {
       });
     }
 
-    // Show logout button
+    // Toggle Header Buttons
+    if (loginBtnNav) loginBtnNav.classList.add('hidden');
+    const notificationBtn = document.getElementById('notification-btn');
+    if (notificationBtn) notificationBtn.classList.remove('hidden');
     if (logoutBtn) logoutBtn.classList.remove('hidden');
 
     // 通知履歴を初期ロード
@@ -171,6 +173,12 @@ async function init() {
     if (landingPage) {
       landingPage.classList.remove('hidden');
     }
+
+    // Toggle Header Buttons
+    if (loginBtnNav) loginBtnNav.classList.remove('hidden');
+    const notificationBtn = document.getElementById('notification-btn');
+    if (notificationBtn) notificationBtn.classList.add('hidden');
+    if (logoutBtn) logoutBtn.classList.add('hidden');
   }
 }
 

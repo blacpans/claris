@@ -88,31 +88,37 @@
         </div>
     </div>
 
+    <!-- Global Header -->
+    <header class="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-2xl z-50 bg-background/30 backdrop-blur-xl border border-white/10 rounded-full p-3 px-6 flex justify-between items-center h-16 transition-all duration-300 shadow-sm">
+      <div class="flex items-center gap-3">
+          <h1 class="text-xl font-bold tracking-widest bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Claris 🌸</h1>
+          <div id="version-display" class="text-xs text-muted-foreground font-mono mt-1 opacity-70"></div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+          <!-- Visualizer (Hidden by default) -->
+          <canvas id="waveform-header" width="60" height="30" class="opacity-50"></canvas>
+          
+          <!-- Login Button (Shown when unauthenticated) -->
+          <button id="login-btn-nav" class="flex items-center gap-2 px-5 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-sm hover:bg-primary/20 transition-all hover:scale-105 active:scale-95 hidden">
+              <span class="text-lg">✨</span> Login
+          </button>
+
+          <!-- Notification Button (Authenticated only) -->
+          <button id="notification-btn" class="p-2 text-muted-foreground hover:text-foreground transition-all hover:bg-white/10 rounded-full relative group hidden" aria-label="Notifications">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span id="notification-badge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background hidden group-hover:scale-110 transition-transform"></span>
+          </button>
+
+          <!-- Logout Button (Authenticated only) -->
+          <button id="logout-btn" class="p-2 text-muted-foreground hover:text-foreground transition-colors hover:bg-white/10 rounded-full hidden" aria-label="Logout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          </button>
+      </div>
+    </header>
+
   <div id="app-container" style="display: none;" class="flex flex-col h-full w-full opacity-0 transition-opacity duration-500 visible:opacity-100 relative z-10">
       
-      <!-- App Header -->
-      <header class="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-2xl z-50 bg-background/30 backdrop-blur-xl border border-white/10 rounded-full p-3 px-6 flex justify-between items-center h-16 transition-all duration-300 shadow-sm">
-        <div class="flex items-center gap-3">
-            <h1 class="text-xl font-bold tracking-widest bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Claris 🌸</h1>
-            <div id="version-display" class="text-xs text-muted-foreground font-mono mt-1 opacity-70"></div>
-        </div>
-        
-        <div class="flex items-center gap-2">
-            <!-- Visualizer (Hidden by default) -->
-            <canvas id="waveform-header" width="60" height="30" class="opacity-50"></canvas>
-            
-            <!-- Notification Button -->
-            <button id="notification-btn" class="p-2 text-muted-foreground hover:text-foreground transition-all hover:bg-white/10 rounded-full relative group" aria-label="Notifications">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                <span id="notification-badge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background hidden group-hover:scale-110 transition-transform"></span>
-            </button>
-
-            <button id="logout-btn" class="p-2 text-muted-foreground hover:text-foreground transition-colors hover:bg-white/10 rounded-full hidden" aria-label="Logout">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-            </button>
-        </div>
-      </header>
-
       <!-- Chat Area -->
       <main id="chat-container" class="flex-1 w-full pt-24 pb-32 flex flex-col">
         <div id="chat-history" class="flex-1 min-h-0 overflow-y-auto space-y-4 py-4 scroll-smooth centered-col px-4">
