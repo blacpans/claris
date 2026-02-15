@@ -140,6 +140,13 @@ export class AdkRunnerService {
     if (session.events && session.events.length > 0) {
       console.log(`[Runner] Injecting ${session.events.length} historical events into runner session.`);
       for (const event of session.events) {
+        // Skip events with error codes to avoid poisoning the context
+        if (event.errorCode) {
+          console.log(`[Runner] Skipping malformed/error event: ${event.id} (Error: ${event.errorMessage})`);
+          continue;
+        }
+
+        console.log(`[Runner] Injected Event: ${event.id} by ${event.author}`);
         await runner.sessionService.appendEvent({
           session: runnerSession,
           event,
