@@ -33,7 +33,7 @@ if (process.env.CLARIS_ENV_LOADED !== 'true') {
 
   // 4. Load secrets from volume mounts (e.g. Cloud Run, Docker Swarm)
   // This allows secrets to be loaded even if "Expose as environment variable" is missed
-  const secretDirs = ['/run/secrets', '/var/run/secrets', '/secrets'];
+  const secretDirs = ['/app/scripts/temp_secrets'];
   for (const dir of secretDirs) {
     if (fs.existsSync(dir)) {
       try {
@@ -53,7 +53,7 @@ if (process.env.CLARIS_ENV_LOADED !== 'true') {
             }
           }
         }
-      } catch (_e) {
+      } catch (e) {
         // Directory access error, ignore
       }
     }
@@ -63,3 +63,5 @@ if (process.env.CLARIS_ENV_LOADED !== 'true') {
   process.env.CLARIS_ENV_LOADED = 'true';
   console.log(`[Config] Environment: ${APP_ENV}`);
 }
+
+console.log("TEST_SECRET=" + process.env.TEST_SECRET);
