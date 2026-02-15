@@ -31,35 +31,20 @@ if (process.env.CLARIS_ENV_LOADED !== 'true') {
   // 3. .env (Base defaults)
   loadEnvFile('.env');
 
-  // 4. Load secrets from volume mounts (e.g. Cloud Run, Docker Swarm)
-  // This allows secrets to be loaded even if "Expose as environment variable" is missed
-  const secretDirs = ['/run/secrets', '/var/run/secrets', '/secrets'];
-  for (const dir of secretDirs) {
-    if (fs.existsSync(dir)) {
-      try {
-        const files = fs.readdirSync(dir);
-        for (const file of files) {
-          const fullPath = path.join(dir, file);
-          // Skip hidden files and directories
-          if (file.startsWith('.') || fs.statSync(fullPath).isDirectory()) continue;
-
-          // Only load if not already set (Env vars take precedence)
-          if (!process.env[file]) {
-            try {
-              const content = fs.readFileSync(fullPath, 'utf8').trim();
-              process.env[file] = content;
-            } catch (e) {
-              console.error(`[Config] Failed to load secret ${file}:`, e);
-            }
-          }
-        }
-      } catch (_e) {
-        // Directory access error, ignore
-      }
-    }
-  }
-
   // Mark as loaded for child processes
   process.env.CLARIS_ENV_LOADED = 'true';
   console.log(`[Config] Environment: ${APP_ENV}`);
+
+  // Diagnostics: Log loaded environment variables (keys only)
+  // This helps identify if variables are missing or named incorrectly (e.g. GITHUB_TOKEN vs github_token)
+  const envKeys = Object.keys(process.env)
+    .filter((k) => !k.startsWith('npm_')) // Filter out npm internal vars
+    .sort();
+  console.log('[Config] Loaded Environment Variables:', envKeys.join(', '));
+
+  if (!process.env.GITHUB_TOKEN) {
+    console.warn('[Config] ⚠️ GITHUB_TOKEN is MISSING or EMPTY.');
+  } else {
+    console.log('[Config] ✅ GITHUB_TOKEN is present.');
+  }
 }
