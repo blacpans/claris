@@ -40,7 +40,7 @@ describe('PushService', () => {
   });
 
   test('should return VAPID public key', async () => {
-    const { PushService } = await import('./pushService.js');
+    const { PushService } = await import('../pushService.js');
     const db = createMockFirestore();
     const service = new PushService(db);
     expect(service.getPublicKey()).toBe('test-public-key');
@@ -48,14 +48,14 @@ describe('PushService', () => {
 
   test('should return null when VAPID key is not set', async () => {
     delete process.env.VAPID_PUBLIC_KEY;
-    const { PushService } = await import('./pushService.js');
+    const { PushService } = await import('../pushService.js');
     const db = createMockFirestore();
     const service = new PushService(db);
     expect(service.getPublicKey()).toBeNull();
   });
 
   test('should save subscription to Firestore', async () => {
-    const { PushService } = await import('./pushService.js');
+    const { PushService } = await import('../pushService.js');
     const db = createMockFirestore();
     const service = new PushService(db);
 
@@ -70,7 +70,7 @@ describe('PushService', () => {
   test('should return false for sendPush when not configured', async () => {
     delete process.env.VAPID_PUBLIC_KEY;
     delete process.env.VAPID_PRIVATE_KEY;
-    const { PushService } = await import('./pushService.js');
+    const { PushService } = await import('../pushService.js');
     const db = createMockFirestore();
     const service = new PushService(db);
 

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { WebSocket } from 'ws';
-import type { ClarisEvent } from './types.js';
+import type { ClarisEvent } from '../types.js';
 
 // PushService のモック
 const mockSendPush = vi.fn().mockResolvedValue(false);
 
-vi.mock('./pushService.js', () => {
+vi.mock('../pushService.js', () => {
   return {
     PushService: function MockPushService() {
       return {
@@ -35,7 +35,7 @@ describe('NotificationService', () => {
   });
 
   test('should send via WebSocket when connected', async () => {
-    const { NotificationService } = await import('./notificationService.js');
+    const { NotificationService } = await import('../notificationService.js');
     const service = new NotificationService();
 
     // モック WebSocket
@@ -52,7 +52,7 @@ describe('NotificationService', () => {
   });
 
   test('should fallback to Web Push when WebSocket is not connected', async () => {
-    const { NotificationService } = await import('./notificationService.js');
+    const { NotificationService } = await import('../notificationService.js');
     const service = new NotificationService();
 
     // ユーザー未登録 → WebSocket なし
@@ -66,7 +66,7 @@ describe('NotificationService', () => {
   });
 
   test('should expose PushService via getPushService()', async () => {
-    const { NotificationService } = await import('./notificationService.js');
+    const { NotificationService } = await import('../notificationService.js');
     const service = new NotificationService();
 
     const pushService = service.getPushService();

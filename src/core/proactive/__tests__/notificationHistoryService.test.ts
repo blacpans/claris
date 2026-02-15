@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { NotificationHistoryService } from './notificationHistoryService.js';
-import type { ProactiveNotification } from './types.js';
+import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
+import { NotificationHistoryService } from '../notificationHistoryService.js';
+import type { ProactiveNotification } from '../types.js';
 
 vi.mock('@google-cloud/firestore', () => {
   const mockAdd = vi.fn().mockResolvedValue({ id: 'doc-123' });
@@ -30,20 +30,22 @@ vi.mock('@google-cloud/firestore', () => {
   };
 });
 
+interface MockFirestoreMocks {
+  mockAdd: Mock;
+  mockGet: Mock;
+  mockUpdate: Mock;
+  mockCommit: Mock;
+}
+
 describe('NotificationHistoryService', () => {
   let service: NotificationHistoryService;
-  let mocks: {
-    mockAdd: ReturnType<typeof vi.fn>;
-    mockGet: ReturnType<typeof vi.fn>;
-    mockUpdate: ReturnType<typeof vi.fn>;
-    mockCommit: ReturnType<typeof vi.fn>;
-  };
+  let mocks: MockFirestoreMocks;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     service = new NotificationHistoryService();
     // モックへの参照を取得
-    const firestore = (await import('@google-cloud/firestore')) as unknown as { _mocks: typeof mocks };
+    const firestore = (await import('@google-cloud/firestore')) as unknown as { _mocks: MockFirestoreMocks };
     mocks = firestore._mocks;
   });
 
@@ -79,7 +81,9 @@ describe('NotificationHistoryService', () => {
 
     const notifications = await service.getNotifications('user-1');
     expect(notifications).toHaveLength(1);
-    expect(notifications[0].id).toBe('doc-1');
+    const firstNotification = notifications[0];
+    if (!firstNotification) throw new Error('Notification not found');
+    expect(firstNotification.id).toBe('doc-1');
   });
 
   test('should mark notification as read', async () => {

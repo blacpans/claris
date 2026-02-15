@@ -31,10 +31,10 @@ describe('createClarisAgent Name Switching', () => {
 
   beforeEach(() => {
     vi.resetModules();
-    process.env = { ...originalEnv, CLARIS_NAME: 'claris-bot-blacpans' };
+    process.env = { ...originalEnv, BOT_NAME: 'claris-bot-blacpans' };
   });
 
-  it('should use CLARIS_NAME in review mode', async () => {
+  it('should use BOT_NAME in review mode', async () => {
     const agent = (await createClarisAgent({ mode: 'review' })) as unknown as { name: string; instruction: string };
     expect(agent.name).toBe('claris_bot_blacpans');
     expect(agent.instruction).toContain('あなたは「claris-bot-blacpans」');

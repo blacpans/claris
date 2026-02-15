@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { EventQueue } from './eventQueue.js';
-import type { ClarisEvent } from './types.js';
+import { EventQueue } from '../eventQueue.js';
+import type { ClarisEvent } from '../types.js';
 
 describe('EventQueue', () => {
   let queue: EventQueue;
@@ -55,9 +55,11 @@ describe('EventQueue', () => {
     const drained = queue.drainAll();
 
     expect(drained).toHaveLength(3);
-    expect(drained[0].id).toBe('2');
-    expect(drained[1].id).toBe('3');
-    expect(drained[2].id).toBe('1');
+    const [first, second, third] = drained;
+    if (!first || !second || !third) throw new Error('Drained events not found');
+    expect(first.id).toBe('2');
+    expect(second.id).toBe('3');
+    expect(third.id).toBe('1');
     expect(queue.size).toBe(0);
   });
 

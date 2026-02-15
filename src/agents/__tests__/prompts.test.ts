@@ -8,7 +8,7 @@ describe('generateLiveSessionConfig', () => {
     const soulPrompt = '## 現在のソウル: Logic Soul (論理) 🟦';
 
     const config = generateLiveSessionConfig(agentName, memory, soulPrompt);
-    const instruction = config.systemInstruction.parts[0].text;
+    const instruction = config.systemInstruction?.parts?.[0]?.text;
 
     expect(instruction).toContain('Logic Soul');
     expect(instruction).toContain('Claris');
@@ -17,7 +17,7 @@ describe('generateLiveSessionConfig', () => {
 
   it('should work without style prompt', () => {
     const config = generateLiveSessionConfig('Claris', 'Memory');
-    const instruction = config.systemInstruction.parts[0].text;
+    const instruction = config.systemInstruction?.parts?.[0]?.text;
 
     expect(instruction).not.toContain('Soul');
     expect(instruction).toContain('Claris');
