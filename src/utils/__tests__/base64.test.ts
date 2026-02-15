@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fastBase64Decode } from './base64.js';
+import { fastBase64Decode } from '../base64.js';
 
 describe('fastBase64Decode', () => {
   it('should decode empty string', () => {

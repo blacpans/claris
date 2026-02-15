@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { EventQueue } from './eventQueue.js';
-import { notificationService } from './notificationService.js';
-import type { ProactiveAgent } from './proactiveAgent.js';
+import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
+import { EventQueue } from '../eventQueue.js';
+import { notificationService } from '../notificationService.js';
+import type { ProactiveAgent } from '../proactiveAgent.js';
 
 // シングルトンのモジュールロード時に ProactiveAgent が new されるのを防ぐ
-vi.mock('./proactiveAgent.js', () => {
+vi.mock('../proactiveAgent.js', () => {
   return {
     ProactiveAgent: function MockProactiveAgent() {
       return {
@@ -18,9 +18,13 @@ vi.mock('./proactiveAgent.js', () => {
   };
 });
 
+interface MockAgent {
+  evaluateEvent: Mock;
+}
+
 describe('EventCollector', () => {
   let queue: EventQueue;
-  let mockAgent: { evaluateEvent: ReturnType<typeof vi.fn> };
+  let mockAgent: MockAgent;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,15 +45,17 @@ describe('EventCollector', () => {
 
   test('should collect and normalize Gmail events', async () => {
     // DI でモックを注入
-    const { EventCollector } = await import('./eventCollector.js');
+    const { EventCollector } = await import('../eventCollector.js');
     const collector = new EventCollector(queue, mockAgent as unknown as ProactiveAgent);
 
     const emails = [{ from: 'test@example.com', subject: 'Test Email' }];
     const events = collector.collectGmailEvent('test-user', emails);
 
     expect(events).toHaveLength(1);
-    expect(events[0].source).toBe('gmail');
-    expect(events[0].type).toBe('new_email');
+    const firstEvent = events[0];
+    if (!firstEvent) throw new Error('Event not found');
+    expect(firstEvent.source).toBe('gmail');
+    expect(firstEvent.type).toBe('new_email');
     expect(queue.size).toBe(1);
 
     // AI評価は非同期なので、マイクロタスクが完了するのを待つ
@@ -66,7 +72,7 @@ describe('EventCollector', () => {
   });
 
   test('should collect and normalize GitHub events', async () => {
-    const { EventCollector } = await import('./eventCollector.js');
+    const { EventCollector } = await import('../eventCollector.js');
     const collector = new EventCollector(queue, mockAgent as unknown as ProactiveAgent);
 
     const event = collector.collectGitHubEvent('test-user', 'pull_request_opened', {
@@ -100,7 +106,7 @@ describe('EventCollector', () => {
       reason: 'Not important',
     });
 
-    const { EventCollector } = await import('./eventCollector.js');
+    const { EventCollector } = await import('../eventCollector.js');
     const collector = new EventCollector(queue, mockAgent as unknown as ProactiveAgent);
 
     collector.collectGitHubEvent('test-user', 'push', {
@@ -115,7 +121,7 @@ describe('EventCollector', () => {
   test('should handle duplicate events gracefully', async () => {
     vi.useFakeTimers();
 
-    const { EventCollector } = await import('./eventCollector.js');
+    const { EventCollector } = await import('../eventCollector.js');
     const collector = new EventCollector(queue, mockAgent as unknown as ProactiveAgent);
 
     const emails = [{ from: 'test@example.com', subject: 'Test Email' }];

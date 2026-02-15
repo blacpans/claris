@@ -1,7 +1,7 @@
 import type { GoogleGenAI } from '@google/genai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProactiveAgent } from './proactiveAgent.js';
-import type { ClarisEvent } from './types.js';
+import { ProactiveAgent } from '../proactiveAgent.js';
+import type { ClarisEvent } from '../types.js';
 
 // Mock GoogleGenAI
 vi.mock('@google/genai', () => {

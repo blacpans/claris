@@ -151,7 +151,7 @@ export class ServerLiveSession extends EventEmitter {
     }
   }
 
-  private async loadMemory(userId: string, sessionId?: string): Promise<string> {
+  private async loadMemory(userId: string, _sessionId?: string): Promise<string> {
     try {
       // Execute Long-term and Short-term memory fetch in parallel
       const [longTermResults, session] = await Promise.all([
