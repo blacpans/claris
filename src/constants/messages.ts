@@ -6,6 +6,7 @@ export const MESSAGES = {
     HEALTH_CHECK: 'Hello! Claris is ready to help! 🌸',
     CHAT_MISSING_MESSAGE: 'message is required',
     INTERNAL_ERROR: 'Internal server error',
+    NO_RESPONSE: 'Clarisからの応答がありませんでした。もう一度話しかけてみてね！🌸',
   },
   AUTH: {
     UNAUTHORIZED_SECRET: 'Unauthorized: Missing or invalid secret',

@@ -48,7 +48,17 @@ interface FetchDiffInput {
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
+    // If it's an Octokit error, it might have a response body with more details
+    const maybeOctokitError = error as Error & {
+      response?: { data?: { message?: string } };
+    };
+    if (maybeOctokitError.response?.data?.message) {
+      return `${error.message}: ${maybeOctokitError.response.data.message}`;
+    }
     return error.message;
+  }
+  if (typeof error === 'object' && error !== null) {
+    return JSON.stringify(error);
   }
   return String(error);
 }
@@ -147,7 +157,7 @@ export const postCommentTool = new FunctionTool({
 /**
  * Lists Pull Requests in a repository
  */
-export async function listPRs(input: ListPRsInput): Promise<PRInfo[] | string> {
+export async function listPRs(input: ListPRsInput): Promise<{ prs: PRInfo[] } | string> {
   try {
     const client = getGitHubClient();
     const { owner, repo } = parseRepo(input.repo);
@@ -159,13 +169,15 @@ export async function listPRs(input: ListPRsInput): Promise<PRInfo[] | string> {
       per_page: 10,
     });
 
-    return response.data.map((pr) => ({
-      number: pr.number,
-      title: pr.title,
-      author: pr.user?.login || 'unknown',
-      state: pr.state,
-      createdAt: pr.created_at,
-    }));
+    return {
+      prs: response.data.map((pr) => ({
+        number: pr.number,
+        title: pr.title,
+        author: pr.user?.login || 'unknown',
+        state: pr.state,
+        createdAt: pr.created_at,
+      })),
+    };
   } catch (error) {
     const message = getErrorMessage(error);
     console.error(`Error listing PRs: ${message}`);

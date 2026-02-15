@@ -1,5 +1,6 @@
 import { type Event, InMemoryRunner } from '@google/adk';
 import { createClarisAgent } from '@/agents/claris.js';
+import { MESSAGES } from '@/constants/messages.js';
 import { PubSubListener } from '@/core/async/pubsub.js';
 import { eventCollector } from '@/core/proactive/index.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
@@ -140,6 +141,13 @@ export class AdkRunnerService {
     if (session.events && session.events.length > 0) {
       console.log(`[Runner] Injecting ${session.events.length} historical events into runner session.`);
       for (const event of session.events) {
+        // Skip events with error codes to avoid poisoning the context
+        if (event.errorCode) {
+          console.log(`[Runner] Skipping malformed/error event: ${event.id} (Error: ${event.errorMessage})`);
+          continue;
+        }
+
+        console.log(`[Runner] Injected Event: ${event.id} by ${event.author}`);
         await runner.sessionService.appendEvent({
           session: runnerSession,
           event,
@@ -167,7 +175,7 @@ export class AdkRunnerService {
       let eventCount = 0;
       for await (const event of events) {
         eventCount++;
-        console.log(`[Runner] Event #${eventCount} Received. Author: "${event.author}"`);
+        console.log(`[Runner] Event #${eventCount} Received: ${JSON.stringify(event, null, 2)}`);
 
         if (session) {
           if (!event.timestamp) {
@@ -177,24 +185,25 @@ export class AdkRunnerService {
         }
 
         // Extract text content from agent responses
-        // 非常におおらかな判定：Author が agent 名に一致するか、空か、 model/assistant の場合にテキストを拾うじゃんね！✨
+        // 厳密な判定：Author が明示的に agent 名に一致するか、 model/assistant の場合にのみテキストを拾うじゃんね！✨
+        // author が空（!author）の場合は、ツール実行結果などの可能性が高いから除外するよ！💎
         const author = (event.author || '').toLowerCase();
         const agentName = agent.name.toLowerCase();
-        const isAgent = !author || author === agentName || author === 'model' || author === 'assistant';
-        console.log(`[Runner] isAgent: ${isAgent}, author: "${author}", agentName: "${agentName}"`);
+        const isAgent = author === agentName || author === 'model' || author === 'assistant';
 
         if (!isAgent || !event.content?.parts) {
           continue;
         }
 
-        console.log(`[Runner] event.content: ${event.content}`);
         for (const part of event.content.parts) {
           if ('text' in part && part.text) {
             responseText += part.text;
           }
         }
       }
-      console.log(`🚀 [Runner] Generation loop finished. Text length: ${responseText.length}`);
+      console.log(
+        `🚀 [Runner] Generation loop finished. Event count: ${eventCount}, Total text length: ${responseText.length}`,
+      );
     } catch (e: unknown) {
       console.error(`[Runner] Error in generation loop: ${e}`);
       throw e;
@@ -207,7 +216,7 @@ export class AdkRunnerService {
       }
     }
 
-    return responseText || 'Clarisからの応答がありませんでした。';
+    return responseText || MESSAGES.SERVER.NO_RESPONSE;
   }
 }
 

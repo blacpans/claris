@@ -100,6 +100,10 @@ async function handlePullRequestEvent(
     const diff = await fetchDiff({ repo, prNumber });
     const prDetails = await getPRDetails({ repo, prNumber });
 
+    if (typeof prDetails === 'string') {
+      throw new Error(`Failed to get PR details: ${prDetails}`);
+    }
+
     // Prepare prompt for Claris (without Diff)
     const prompt = generatePRReviewPrompt(
       repo,

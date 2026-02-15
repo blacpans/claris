@@ -11,8 +11,10 @@ let octokitInstance: Octokit | null = null;
 export function getGitHubClient(): Octokit {
   if (!octokitInstance) {
     const token = process.env.GITHUB_TOKEN;
-    if (!token) {
-      throw new Error('GITHUB_TOKEN environment variable is required');
+    if (!token || token.trim() === '') {
+      throw new Error(
+        'GITHUB_TOKEN environment variable is not set or is empty. Please set a valid GitHub Personal Access Token in your environment.',
+      );
     }
     octokitInstance = new Octokit({ auth: token });
   }
@@ -23,11 +25,15 @@ export function getGitHubClient(): Octokit {
  * Parses owner and repo from a GitHub URL or "owner/repo" string
  */
 export function parseRepo(repoInput: string): { owner: string; repo: string } {
+  if (!repoInput) {
+    throw new Error('Repository input is empty. Please provide a repository name (owner/repo) or URL.');
+  }
+
   // Handle "owner/repo" format
   if (repoInput.includes('/') && !repoInput.includes('://')) {
     const [owner, repo] = repoInput.split('/');
     if (!owner || !repo) {
-      throw new Error(`Invalid repo format: ${repoInput}`);
+      throw new Error(`Invalid repository format: "${repoInput}". Expected "owner/repo" or a full GitHub URL.`);
     }
     return { owner, repo };
   }
@@ -38,5 +44,7 @@ export function parseRepo(repoInput: string): { owner: string; repo: string } {
     return { owner: match[1], repo: match[2].replace(/\.git$/, '') };
   }
 
-  throw new Error(`Cannot parse repo from: ${repoInput}`);
+  throw new Error(
+    `Could not parse repository from: "${repoInput}". Please ensure it's in "owner/repo" format or a valid GitHub URL (e.g., https://github.com/owner/repo).`,
+  );
 }
