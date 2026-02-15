@@ -149,6 +149,7 @@ app.post('/chat', async (c) => {
       userId?: string;
       sessionId?: string;
       message: string;
+      location?: string;
       context?: { activeFile?: string };
     }>();
 
@@ -163,7 +164,10 @@ app.post('/chat', async (c) => {
       userId,
       sessionId,
       message: body.message,
-      context: body.context,
+      context: {
+        ...body.context,
+        location: body.location,
+      },
     });
 
     return c.json({

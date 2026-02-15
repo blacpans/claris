@@ -15,6 +15,8 @@ export const webhookApp = new Hono();
 // Webhook secret for signature verification (REQUIRED)
 const webhookSecretEnv = process.env.GITHUB_WEBHOOK_SECRET;
 
+const botName = process.env.BOT_NAME || 'claris-bot';
+
 // Validate at module load time - fail fast if secret is not configured
 if (!webhookSecretEnv) {
   throw new Error('GITHUB_WEBHOOK_SECRET is required for webhook signature verification');
@@ -89,7 +91,6 @@ async function handlePullRequestEvent(
   try {
     // Add claris-bot as reviewer (only on opened)
     if (action === 'opened') {
-      const botName = process.env.CLARIS_NAME || 'claris-bot';
       console.log(`👥 Adding ${botName} as reviewer...`);
       await addReviewer({ repo, prNumber, reviewer: botName });
     }
@@ -116,7 +117,7 @@ async function handlePullRequestEvent(
     );
 
     // Run Claris agent to analyze the PR
-    console.log('🤖 Asking Claris to review...');
+    console.log(`🤖 Asking ${botName} to review...`);
     const aiResponse = await adkRunner.run({
       userId: 'github-webhook',
       sessionId: `pr-${repo.replace('/', '-')}-${prNumber}`,
@@ -280,7 +281,6 @@ webhookApp.post('/', async (c) => {
 
     // Only process newly created comments on PRs
     if (action === 'created' && prNumber) {
-      const botName = process.env.CLARIS_NAME || 'Claris';
       const targetPrNumber = prNumber;
 
       // Check if bot is mentioned (case insensitive)

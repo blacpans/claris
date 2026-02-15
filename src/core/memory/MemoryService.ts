@@ -24,6 +24,7 @@ export class MemoryService {
   private collectionName = 'claris-memories';
   private model = getSummarizationModel(); // For summarization
   private embeddingModel = getEmbeddingModel();
+  private embeddingCache = new Map<string, number[]>();
 
   // Output dimension for text-embedding-004
   public readonly EMBEDDING_DIMENSION = 768;
@@ -88,43 +89,52 @@ export class MemoryService {
    * Searches for relevant memories using Vector Search.
    */
   async searchMemories(userId: string, queryText: string, limit = 3): Promise<MemorySearchResult[]> {
+    const timeoutPromise = new Promise<MemorySearchResult[]>((_, reject) =>
+      setTimeout(() => reject(new Error('Memory search timeout')), 3000),
+    );
+
     try {
-      // 1. Generate Query Embedding
-      const queryVector = await this.generateEmbedding(queryText);
+      const searchPromise = (async () => {
+        // 1. Generate Query Embedding
+        const embedStartTime = performance.now();
+        const queryVector = await this.generateEmbedding(queryText);
+        console.log(`🧠 [MemoryService] Embedding generated in ${Math.round(performance.now() - embedStartTime)}ms`);
 
-      // 2. Vector Search
-      const collection = this.db.collection(this.collectionName);
+        // 2. Vector Search
+        const collection = this.db.collection(this.collectionName);
 
-      // Note: Requires a composite index on (userId, embedding) if filtering by userId.
-      // For now, we might scan all if the dataset is small, or strictly create index.
-      // Let's try attempting nearest neighbor search.
+        const searchStartTime = performance.now();
+        const vectorQuery = collection
+          .where('userId', '==', userId)
+          .findNearest('embedding', FieldValue.vector(queryVector), {
+            limit: limit,
+            distanceMeasure: 'COSINE',
+          });
 
-      // Vector Search syntax for @google-cloud/firestore
-      const vectorQuery = collection
-        .where('userId', '==', userId)
-        .findNearest('embedding', FieldValue.vector(queryVector), {
-          limit: limit,
-          distanceMeasure: 'COSINE',
+        const snapshot = await vectorQuery.get();
+        console.log(
+          `🧠 [MemoryService] Vector search completed in ${Math.round(performance.now() - searchStartTime)}ms`,
+        );
+
+        return snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            memory: {
+              id: doc.id,
+              userId: data.userId,
+              sessionId: data.sessionId,
+              summary: data.summary,
+              embedding: data.embedding,
+              timestamp: data.timestamp,
+            },
+            distance: 0,
+          };
         });
+      })();
 
-      const snapshot = await vectorQuery.get();
-
-      return snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          memory: {
-            id: doc.id,
-            userId: data.userId,
-            sessionId: data.sessionId,
-            summary: data.summary,
-            embedding: data.embedding,
-            timestamp: data.timestamp,
-          },
-          distance: 0,
-        };
-      });
+      return await Promise.race([searchPromise, timeoutPromise]);
     } catch (e) {
-      console.error('Vector search failed:', e);
+      console.error('Vector search failed or timed out:', e);
       return [];
     }
   }
@@ -222,6 +232,11 @@ export class MemoryService {
   }
 
   private async generateEmbedding(text: string): Promise<number[]> {
+    const cached = this.embeddingCache.get(text);
+    if (cached) {
+      return cached;
+    }
+
     const response = await this.genAI.models.embedContent({
       model: this.embeddingModel,
       contents: [{ role: 'user', parts: [{ text: text }] }],
@@ -231,6 +246,8 @@ export class MemoryService {
       throw new Error('Embedding generation failed');
     }
 
-    return response.embeddings[0].values;
+    const values = response.embeddings[0].values;
+    this.embeddingCache.set(text, values);
+    return values;
   }
 }

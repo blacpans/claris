@@ -43,6 +43,7 @@ export interface ClarisContext {
   activeFile?: string;
   mode?: AgentMode;
   diff?: string;
+  location?: string;
 }
 
 /**
@@ -52,9 +53,10 @@ export async function createClarisAgent(context?: ClarisContext) {
   const config = await loadConfig();
   const modelName = getModelName(config.rapid);
   const mode = context?.mode || 'chat';
-  // GitHub Webhook経由（reviewモード）の時は環境変数の名前（GitHubボット名）を、
-  // それ以外（Live Chatなど）の時は常に「Claris」を自認するように切り替えるじゃんね！✨💎
-  const agentName = mode === 'review' ? process.env.CLARIS_NAME || 'Claris' : 'Claris';
+
+  const botName = process.env.BOT_NAME || 'claris-bot';
+  const naviName = process.env.NAVI_NAME || 'Claris';
+  const agentName = mode === 'review' ? botName : naviName;
 
   const model = new Gemini({
     model: modelName,
@@ -79,7 +81,12 @@ export async function createClarisAgent(context?: ClarisContext) {
     minute: '2-digit',
     timeZone: process.env.TZ || 'Asia/Tokyo',
   });
-  instruction += `\n\n## 現在の日時\n現在は ${dateStr} ${timeStr} です。ユーザーからの質問には、この日時を基準に回答してください。`;
+  instruction += `\n\n## Current Date and Time\nThe current time is ${dateStr} ${timeStr}. Use this as the reference for user questions.`;
+
+  // 🌍 Location Injection: Let Claris know where the user is
+  if (context?.location) {
+    instruction += `\n\n## User's Location\nThe user is currently in **${context.location}**. Use this information for location-aware services like weather or place searches.`;
+  }
 
   // 🦀 Soul Unison: Apply Thinking Style based on active file or preference 🐳
   if (context?.activeFile || config.preferredStyle) {
