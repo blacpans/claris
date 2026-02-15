@@ -69,8 +69,9 @@ async function checkAuth() {
 }
 
 // Bind Login Button
-if (UI.loginButton) {
-  UI.loginButton.addEventListener('click', async () => {
+const loginBtn = document.getElementById('login-button');
+if (loginBtn) {
+  loginBtn.addEventListener('click', async () => {
     // Request notification permission on user interaction
     await setupPushNotifications().catch((err) => console.error('Notification setup failed:', err));
     window.location.href = '/api/auth/login';
@@ -115,52 +116,69 @@ async function init() {
   // Auth Check
   const isAuthenticated = await checkAuth();
 
+  // Handle Nav Login Button
+  const loginBtnNav = document.getElementById('login-btn-nav');
+  if (loginBtnNav) {
+    loginBtnNav.addEventListener('click', () => {
+      window.location.href = '/api/auth/login';
+    });
+  }
+
   // Hide loading screen
   if (loadingScreen) {
     loadingScreen.classList.add('hidden');
-    // Remove from DOM after transition (optional, but good for cleanup)
+    // Remove from DOM after transition
     setTimeout(() => {
       if (loadingScreen.parentNode) loadingScreen.parentNode.removeChild(loadingScreen);
     }, 500);
   }
 
   if (isAuthenticated) {
+    // Hide Landing Page
+    const landingPage = document.getElementById('landing-page');
+    if (landingPage) {
+      landingPage.classList.add('hidden');
+    }
+
     // Show App UI with fade in
     if (appContainer) {
-      // appContainer is display:flex via Tailwind classes (flex flex-col)
-      // Hidden via style="display:none" initially.
       appContainer.style.display = '';
-
-      // Use requestAnimationFrame for smoother transition activation
       requestAnimationFrame(() => {
         appContainer.classList.remove('opacity-0');
         appContainer.classList.add('opacity-100');
       });
     }
 
-    // Show logout button
+    // Toggle Header Buttons
+    if (loginBtnNav) loginBtnNav.classList.add('hidden');
+    const notificationBtn = document.getElementById('notification-btn');
+    if (notificationBtn) notificationBtn.classList.remove('hidden');
     if (logoutBtn) logoutBtn.classList.remove('hidden');
 
     // 通知履歴を初期ロード
     fetchNotifications();
 
-    // Initial scroll to bottom
     if (UI.chatHistory) {
       setTimeout(() => {
         UI.chatHistory.scrollTop = UI.chatHistory.scrollHeight;
-      }, 100); // Wait for layout
+      }, 100);
     }
 
-    // Service Worker & Web Push 登録
     if ('serviceWorker' in navigator) {
-      // ログイン済みならバックグラウンドで通知設定を確認/更新
       setupPushNotifications().catch((err) => console.error('SW init failed:', err));
     }
   } else {
-    // Show Login Overlay
-    if (UI.loginOverlay && !UI.loginOverlay.open) {
-      UI.loginOverlay.showModal();
+    // Show Landing Page
+    const landingPage = document.getElementById('landing-page');
+    if (landingPage) {
+      landingPage.classList.remove('hidden');
     }
+
+    // Toggle Header Buttons
+    if (loginBtnNav) loginBtnNav.classList.remove('hidden');
+    const notificationBtn = document.getElementById('notification-btn');
+    if (notificationBtn) notificationBtn.classList.add('hidden');
+    if (logoutBtn) logoutBtn.classList.add('hidden');
   }
 }
 
