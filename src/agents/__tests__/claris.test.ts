@@ -37,18 +37,18 @@ describe('createClarisAgent Name Switching', () => {
   it('should use BOT_NAME in review mode', async () => {
     const agent = (await createClarisAgent({ mode: 'review' })) as unknown as { name: string; instruction: string };
     expect(agent.name).toBe('claris_bot_blacpans');
-    expect(agent.instruction).toContain('あなたは「claris-bot-blacpans」');
+    expect(agent.instruction).toContain('You are "claris-bot-blacpans"');
   });
 
   it('should use default "Claris" in chat mode even if CLARIS_NAME is set', async () => {
     const agent = (await createClarisAgent({ mode: 'chat' })) as unknown as { name: string; instruction: string };
     expect(agent.name).toBe('claris');
-    expect(agent.instruction).toContain('あなたは「Claris」');
+    expect(agent.instruction).toContain('You are "Claris"');
   });
 
   it('should use default "Claris" when no mode is provided', async () => {
     const agent = (await createClarisAgent()) as unknown as { name: string; instruction: string };
     expect(agent.name).toBe('claris');
-    expect(agent.instruction).toContain('あなたは「Claris」');
+    expect(agent.instruction).toContain('You are "Claris"');
   });
 });

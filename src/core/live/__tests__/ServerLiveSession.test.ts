@@ -1,5 +1,5 @@
 import type { GoogleGenAI } from '@google/genai';
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryService } from '@/core/memory/MemoryService.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
 import { ServerLiveSession } from '../ServerLiveSession.js';
@@ -19,11 +19,16 @@ vi.mock('@google/genai', () => {
   };
 });
 
+// Mock service methods
+const getSessionMock = vi.fn();
+const getLatestSessionMock = vi.fn();
+const appendEventsMock = vi.fn();
+
 vi.mock('@/sessions/firestoreSession.js', () => ({
   FirestoreSessionService: class {
-    getSession = vi.fn();
-    getLatestSession = vi.fn();
-    appendEvents = vi.fn();
+    getSession = getSessionMock;
+    getLatestSession = getLatestSessionMock;
+    appendEvents = appendEventsMock;
   },
 }));
 
@@ -44,9 +49,9 @@ vi.mock('@/config/models.js', () => ({
 }));
 
 interface MockSessionService {
-  getSession: Mock;
-  getLatestSession: Mock;
-  appendEvents: Mock;
+  getSession: typeof getSessionMock;
+  getLatestSession: typeof getLatestSessionMock;
+  appendEvents: typeof appendEventsMock;
 }
 
 describe('ServerLiveSession', () => {
@@ -63,15 +68,18 @@ describe('ServerLiveSession', () => {
       },
     } as unknown as GoogleGenAI;
 
-    const mockService = new FirestoreSessionService() as unknown as FirestoreSessionService;
-    const mockMemory = new MemoryService() as unknown as MemoryService;
+    const mockService = new FirestoreSessionService();
+    const mockMemory = new MemoryService();
 
     // Inject them into the constructor
     liveSession = new ServerLiveSession(mockClient, mockService, mockMemory);
 
-    // Access the actual mock instances from the session object using unknown cast for safety
-    const internalSession = liveSession as unknown as { sessionService: MockSessionService };
-    mockSessionService = internalSession.sessionService;
+    // Access the actual mock instances from the session object
+    mockSessionService = {
+      getSession: getSessionMock,
+      getLatestSession: getLatestSessionMock,
+      appendEvents: appendEventsMock,
+    };
   });
 
   it('sessionId が指定された場合、それを使用してセッションを開始するじゃんね！✨', async () => {
