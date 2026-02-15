@@ -10,11 +10,41 @@ let currentUserId = null;
 let currentSessionId = null;
 // Use global config if available, otherwise fallback to defaults
 let config = window.CLARIS_CONFIG || { version: 'v0.0.0', wsPath: '/ws/live' };
+let locationCache = null;
 
 function getWebSocketUrl() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${window.location.host}${config.wsPath}`;
 }
+
+/**
+ * Gets the current location from the browser Geolocation API.
+ * @returns {Promise<string|null>} latitude,longitude or null
+ */
+async function getCurrentLocation(force = false) {
+  if (locationCache && !force) return locationCache;
+  if (!navigator.geolocation) {
+    console.warn('Geolocation is not supported by this browser.');
+    return null;
+  }
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        locationCache = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+        resolve(locationCache);
+      },
+      (error) => {
+        console.warn('Geolocation failed:', error);
+        resolve(null);
+      },
+      { timeout: 3000 },
+    );
+  });
+}
+
+// Background location fetch
+getCurrentLocation();
 
 // Start visualizer loop or similar logic
 let isSpeaking = false;
@@ -311,7 +341,10 @@ if (UI.inputArea) {
     // Reset height to default (48px)
     UI.messageInput.style.height = '48px';
 
+    const locationPromise = getCurrentLocation(); // Non-blocking if cached
     UI.showLoading();
+
+    const location = await locationPromise;
 
     try {
       const res = await fetch('/chat', {
@@ -321,6 +354,7 @@ if (UI.inputArea) {
           userId: currentUserId || 'anonymous',
           sessionId: currentSessionId,
           message: text,
+          location: location,
         }),
       });
 
@@ -390,10 +424,19 @@ async function startConnection() {
       try {
         await Audio.initAudioContext();
 
+        // Use cached location or wait max 500ms
+        const location = locationCache;
+        if (!location) {
+          getCurrentLocation(); // Start fetch for next time
+        }
+
         const wsUrl = getWebSocketUrl();
         const socketUrl = new URL(wsUrl);
         if (currentUserId) {
           socketUrl.searchParams.set('userId', currentUserId);
+        }
+        if (location) {
+          socketUrl.searchParams.set('location', location);
         }
         ws = new WebSocket(socketUrl.toString());
         ws.binaryType = 'arraybuffer';

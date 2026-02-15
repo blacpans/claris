@@ -43,6 +43,7 @@ export interface ClarisContext {
   activeFile?: string;
   mode?: AgentMode;
   diff?: string;
+  location?: string;
 }
 
 /**
@@ -79,7 +80,12 @@ export async function createClarisAgent(context?: ClarisContext) {
     minute: '2-digit',
     timeZone: process.env.TZ || 'Asia/Tokyo',
   });
-  instruction += `\n\n## 現在の日時\n現在は ${dateStr} ${timeStr} です。ユーザーからの質問には、この日時を基準に回答してください。`;
+  instruction += `\n\n## Current Date and Time\nThe current time is ${dateStr} ${timeStr}. Use this as the reference for user questions.`;
+
+  // 🌍 Location Injection: Let Claris know where the user is
+  if (context?.location) {
+    instruction += `\n\n## User's Location\nThe user is currently in **${context.location}**. Use this information for location-aware services like weather or place searches.`;
+  }
 
   // 🦀 Soul Unison: Apply Thinking Style based on active file or preference 🐳
   if (context?.activeFile || config.preferredStyle) {
