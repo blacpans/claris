@@ -180,8 +180,8 @@ export class AdkRunnerService {
         // 非常におおらかな判定：Author が agent 名に一致するか、空か、 model/assistant の場合にテキストを拾うじゃんね！✨
         const author = (event.author || '').toLowerCase();
         const agentName = agent.name.toLowerCase();
-        const isAgent = !author || author === agentName;
-        console.log(`[Runner] isAgent: ${isAgent}, author: ${author}, agentName: ${agentName}`);
+        const isAgent = !author || author === agentName || author === 'model' || author === 'assistant';
+        console.log(`[Runner] isAgent: ${isAgent}, author: "${author}", agentName: "${agentName}"`);
 
         if (!isAgent || !event.content?.parts) {
           continue;
