@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プライバシーポリシー - Claris 🌸</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+    </style>
+</head>
+<body class="bg-[#050510] text-foreground min-h-screen selection:bg-primary/30">
+    <!-- Background Gradients (Match Hub Design) -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse-slow"></div>
+        <div class="absolute top-[20%] -right-[5%] w-[35%] h-[35%] bg-accent/20 blur-[100px] rounded-full animate-pulse-slow" style="animation-delay: 1s;"></div>
+        <div class="absolute -bottom-[10%] left-[20%] w-[45%] h-[45%] bg-primary/10 blur-[150px] rounded-full animate-pulse-slow" style="animation-delay: 2s;"></div>
+    </div>
+
+    <div class="container mx-auto max-w-4xl p-6 md:p-12 leading-relaxed">
+        <header class="mb-12 text-center">
+            <a href="/" class="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mb-4 group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:-translate-x-1"><path d="m15 18-6-6 6-6"/></svg>
+                戻る
+            </a>
+            <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-[#FF85C0] to-accent bg-clip-text text-transparent pb-2">プライバシーポリシー</h1>
+            <p class="text-muted-foreground mt-2">Privacy Policy</p>
+        </header>
+
+        <main class="space-y-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
+            <section class="prose prose-invert max-w-none prose-pink">
+                <p class="text-lg">
+                    Claris開発チーム（以下「当チーム」といいます。）は、本アプリケーション「Claris」（以下「本サービス」といいます。）において、利用者の個人情報の取り扱いについて、以下のとおりプライバシーポリシー（以下「本ポリシー」といいます。）を定めます。
+                </p>
+
+                <h2 class="text-2xl font-bold text-primary mt-8 mb-4 border-l-4 border-primary pl-4 uppercase tracking-wider">1. 収集する情報</h2>
+                <p>本サービスでは、以下の情報を取得・利用します。</p>
+                <ul class="list-disc list-inside space-y-2 text-muted-foreground">
+                    <li><strong class="text-foreground">Google アカウント情報</strong>: メールアドレス、氏名、プロフィール画像（認証および本人確認のため）</li>
+                    <li><strong class="text-foreground">アクセス許可（Google OAuth スコープ）</strong>: Gmail, Google Calendar, Google Maps, Google Drive 等、利用者が本サービス内で許可した機能の実行に必要なデータ</li>
+                    <li><strong class="text-foreground">対話内容</strong>: Gemini API との対話、およびセッション維持のためのログ情報</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary mt-8 mb-4 border-l-4 border-primary pl-4 uppercase tracking-wider">2. 利用目的</h2>
+                <p>取得した情報は、以下の目的で利用されます。</p>
+                <ul class="list-disc list-inside space-y-2 text-muted-foreground">
+                    <li>自律型エージェントによるアクションの実行（メール確認、予定登録、コードレビュー等）</li>
+                    <li>利用者のコンテキストに基づいたパーソナライズされた提案の作成</li>
+                    <li>本サービスの改善、不具合の修正</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary mt-8 mb-4 border-l-4 border-primary pl-4 uppercase tracking-wider">3. 第三者への提供</h2>
+                <p>本サービスは、以下のパートナーサービスを除き、本人の同意なく第三者に個人情報を提供することはありません。</p>
+                <ul class="list-disc list-inside space-y-2 text-muted-foreground">
+                    <li><strong class="text-foreground">Google Cloud / Vertex AI</strong>: エージェントの思考（Gemini API）およびデータ保存（Firestore等）のため</li>
+                    <li><strong class="text-foreground">GitHub</strong>: ソースコードの連携およびレビュー機能のため</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary mt-8 mb-4 border-l-4 border-primary pl-4 uppercase tracking-wider">4. データの保存と削除</h2>
+                <ul class="list-disc list-inside space-y-2 text-muted-foreground">
+                    <li>利用者のセッションデータおよび認証情報は、Google Cloud Firestore の安全なデータベースに保存されます。</li>
+                    <li>利用者は、本サービス内のログアウトまたは Google アカウント設定の「サードパーティ製のアプリとサービス」から、いつでもアクセス許可を管理・取り消すことができます。</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary mt-8 mb-4 border-l-4 border-primary pl-4 uppercase tracking-wider">5. お問い合わせ</h2>
+                <p>本ポリシーに関するお問い合わせは、開発者（<a href="mailto:blacpans@gmail.com" class="text-primary hover:underline transition-all">blacpans@gmail.com</a>）までお願いいたします。</p>
+
+                <div class="mt-12 pt-8 border-t border-white/10 text-right text-sm text-muted-foreground italic">
+                    2026年2月15日 制定
+                </div>
+            </section>
+        </main>
+
+        <footer class="mt-12 text-center text-muted-foreground text-sm flex flex-col items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-primary font-bold">Claris</span>
+                <span class="opacity-30">|</span>
+                <span>Powered by Gemini</span>
+            </div>
+            <p>&copy; 2026 Claris Development Team</p>
+        </footer>
+    </div>
+</body>
+</html>
