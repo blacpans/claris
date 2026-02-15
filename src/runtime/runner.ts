@@ -1,5 +1,6 @@
 import { type Event, InMemoryRunner } from '@google/adk';
 import { createClarisAgent } from '@/agents/claris.js';
+import { MESSAGES } from '@/constants/messages.js';
 import { PubSubListener } from '@/core/async/pubsub.js';
 import { eventCollector } from '@/core/proactive/index.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
@@ -215,7 +216,7 @@ export class AdkRunnerService {
       }
     }
 
-    return responseText || 'Clarisからの応答がありませんでした。';
+    return responseText || MESSAGES.SERVER.NO_RESPONSE;
   }
 }
 
