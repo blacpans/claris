@@ -1,7 +1,43 @@
 import type { Server } from 'node:http';
+import { GoogleGenAI } from '@google/genai';
+import { Firestore } from '@google-cloud/firestore';
 import { WebSocket, WebSocketServer } from 'ws';
+import { getGenerationLocation } from '@/config/models.js';
 import { ServerLiveSession } from '@/core/live/ServerLiveSession.js';
+import { MemoryService } from '@/core/memory/MemoryService.js';
 import { notificationService } from '@/core/proactive/index.js';
+import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
+
+// --- Singleton Initialization (Shared resources) ---
+
+// 1. Shared Firestore instance
+const db = new Firestore({ ignoreUndefinedProperties: true });
+
+// 2. Client for Live API (Multimodal Live)
+// Live API currently requires specific locations (e.g. us-central1)
+const liveClient = new GoogleGenAI({
+  project: process.env.GOOGLE_CLOUD_PROJECT,
+  location: process.env.GEMINI_LIVE_LOCATION || 'us-central1',
+  vertexai: true,
+  apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
+});
+
+// 3. Client for Generation/Embedding (MemoryService)
+// This can use a different location (e.g. global or user-specified)
+const genClient = new GoogleGenAI({
+  project: process.env.GOOGLE_CLOUD_PROJECT,
+  location: getGenerationLocation(),
+  vertexai: true,
+  apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
+});
+
+// 4. Services (Singleton or Lightweight)
+const sessionService = new FirestoreSessionService({
+  collectionName: process.env.FIRESTORE_COLLECTION || 'claris-sessions',
+  db, // Reuse shared DB
+});
+
+const memoryService = new MemoryService(db, genClient);
 
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ server, path: '/ws/live' });
@@ -18,24 +54,19 @@ export function setupWebSocket(server: Server) {
     // プロアクティブ通知のために WebSocket 接続を登録
     notificationService.register(userId, ws);
 
-    const liveSession = new ServerLiveSession();
-    let isSessionStarted = false;
+    // Initialize session with shared dependencies
+    const liveSession = new ServerLiveSession(liveClient, sessionService, memoryService);
+
+    // 🚀 Start session immediately on connection!
+    // Do NOT wait for first audio. This hides the cold start latency.
+    liveSession.start(userId, activeFile).catch((err) => {
+      console.error('Failed to start session on connection:', err);
+    });
 
     // Handle incoming audio from client
     ws.on('message', async (data, isBinary) => {
       if (isBinary) {
         // Audio chunk received
-        if (!isSessionStarted) {
-          isSessionStarted = true; // Prevent race condition
-          console.log('🎤 First audio chunk received, starting session...');
-
-          // Start in background - DO NOT AWAIT!
-          liveSession.start(userId, activeFile).catch((err) => {
-            console.error('Failed to start session:', err);
-            isSessionStarted = false; // Reset on failure
-          });
-        }
-
         await liveSession.sendAudio(data as Buffer);
       } else {
         // Text message (control commands etc)

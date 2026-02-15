@@ -1,12 +1,12 @@
 import { EventEmitter } from 'node:events';
 import type { Event, Session } from '@google/adk';
-import { GoogleGenAI, type Part } from '@google/genai';
+import type { GoogleGenAI, Part } from '@google/genai';
 import { generateLiveSessionConfig, STYLE_PROMPTS } from '@/agents/prompts.js';
 import '@/config/env.js';
 import { getStyleForExtension, loadConfig } from '@/config/index.js';
 import { getLiveModel } from '@/config/models.js';
-import { MemoryService } from '@/core/memory/MemoryService.js';
-import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
+import type { MemoryService } from '@/core/memory/MemoryService.js';
+import type { FirestoreSessionService } from '@/sessions/firestoreSession.js';
 import { fastBase64Decode } from '@/utils/base64.js';
 
 // Interface for events emitted by ServerLiveSession
@@ -81,18 +81,11 @@ export class ServerLiveSession extends EventEmitter {
   // Audio Buffer for connection phase
   private audioQueue: Buffer[] = [];
 
-  constructor() {
+  constructor(client: GoogleGenAI, sessionService: FirestoreSessionService, memoryService: MemoryService) {
     super();
-    this.client = new GoogleGenAI({
-      project: process.env.GOOGLE_CLOUD_PROJECT,
-      location: process.env.GEMINI_LIVE_LOCATION || 'us-central1',
-      vertexai: true,
-      apiVersion: process.env.GEMINI_API_VERSION || 'v1beta1',
-    });
-    this.sessionService = new FirestoreSessionService({
-      collectionName: process.env.FIRESTORE_COLLECTION || 'claris-sessions',
-    });
-    this.memoryService = new MemoryService();
+    this.client = client;
+    this.sessionService = sessionService;
+    this.memoryService = memoryService;
   }
 
   async start(userId = 'anonymous', activeFile?: string) {
@@ -107,12 +100,11 @@ export class ServerLiveSession extends EventEmitter {
     const model = getLiveModel();
     console.log(`🔌 Connecting to Gemini (${model}) for Server Session...`);
 
-    // Load Memory
-    const memory = await this.loadMemory(userId);
+    // Parallelize loading of Memory and Config
+    const [memory, configData] = await Promise.all([this.loadMemory(userId), loadConfig()]);
     console.log(`🧠 Memory Loaded: ${memory.length} characters`);
 
     // 🦀 Soul Unison integration: Determine style based on active file or config
-    const configData = await loadConfig();
     const style = getStyleForExtension(activeFile || '', configData);
     const soulPrompt = STYLE_PROMPTS[style];
     console.log(`🔌 Applying Style: ${style} Soul (${activeFile || 'no file'})`);
@@ -160,28 +152,29 @@ export class ServerLiveSession extends EventEmitter {
 
   private async loadMemory(userId: string): Promise<string> {
     try {
-      // 1. Long-term Memory (RAG)
-      let longTermMemory = '';
-      try {
-        // Retrieve relevant memories
-        const results = await this.memoryService.searchMemories(
-          userId,
-          'User preferences, personality, and important facts',
-          3,
-        );
-        if (results.length > 0) {
-          longTermMemory = `## Long-term Memory (Relevant Facts)\n${results.map((r) => `- ${r.memory.summary}`).join('\n')}\n\n`;
-        }
-      } catch (err) {
-        console.error('Failed to load long-term memory:', err);
-      }
+      // Execute Long-term and Short-term memory fetch in parallel
+      const [longTermResults, session] = await Promise.all([
+        // 1. Long-term Memory (RAG)
+        this.memoryService
+          .searchMemories(userId, 'User preferences, personality, and important facts', 3)
+          .catch((err) => {
+            console.error('Failed to load long-term memory:', err);
+            return [];
+          }),
+        // 2. Short-term Memory (Recent Session)
+        this.sessionService.getLatestSession({
+          appName: 'claris',
+          userId: userId,
+          config: { numRecentEvents: 20 },
+        }),
+      ]);
 
-      // 2. Short-term Memory (Recent Session)
-      const session = await this.sessionService.getLatestSession({
-        appName: 'claris',
-        userId: userId,
-        config: { numRecentEvents: 20 },
-      });
+      let longTermMemory = '';
+      if (longTermResults.length > 0) {
+        longTermMemory = `## Long-term Memory (Relevant Facts)\n${longTermResults
+          .map((r) => `- ${r.memory.summary}`)
+          .join('\n')}\n\n`;
+      }
 
       if (!session) return `${longTermMemory}No previous conversation history.`.trim();
 
