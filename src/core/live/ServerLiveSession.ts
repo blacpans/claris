@@ -70,6 +70,7 @@ interface ClarisSessionEvent extends Event {
  * Instead of playing/recording audio directly, it emits events and accepts data buffers.
  */
 export class ServerLiveSession extends EventEmitter {
+  private naviName: string;
   private client: GoogleGenAI;
   private session: GeminiLiveSession | null = null;
   private sessionService: FirestoreSessionService;
@@ -83,19 +84,18 @@ export class ServerLiveSession extends EventEmitter {
 
   constructor(client: GoogleGenAI, sessionService: FirestoreSessionService, memoryService: MemoryService) {
     super();
+    this.naviName = process.env.NAVI_NAME || 'Claris';
     this.client = client;
     this.sessionService = sessionService;
     this.memoryService = memoryService;
   }
 
-  async start(userId = 'anonymous', activeFile?: string) {
+  async start(userId = 'anonymous', activeFile?: string, sessionId?: string, location?: string) {
     this.currentUserId = userId;
     this.eventsBuffer = []; // Reset buffer for new session
 
-    // Generate session ID if not exists (for this run)
-    if (!this.currentSessionId) {
-      this.currentSessionId = `session-${Date.now()}`;
-    }
+    // sessionId が渡されたらそれを使うし、なければ新しく作るじゃんね！✨
+    this.currentSessionId = sessionId || `session-${Date.now()}`;
 
     const model = getLiveModel();
     console.log(`🔌 Connecting to Gemini (${model}) for Server Session...`);
@@ -110,8 +110,9 @@ export class ServerLiveSession extends EventEmitter {
     console.log(`🔌 Applying Style: ${style} Soul (${activeFile || 'no file'})`);
 
     // ライブセッションでは常に「Claris」として振る舞うじゃんね！🌸✨
-    const config = generateLiveSessionConfig('Claris', memory, soulPrompt);
+    const config = generateLiveSessionConfig(this.naviName, memory, soulPrompt, location);
 
+    const connectStartTime = performance.now();
     try {
       const liveClient = (
         this.client as unknown as { live: { connect: (params: LiveConnectParams) => Promise<GeminiLiveSession> } }
@@ -134,7 +135,7 @@ export class ServerLiveSession extends EventEmitter {
         },
       });
 
-      console.log('✨ Connected to Gemini Live!');
+      console.log(`✨ [LiveSession] Connected to Gemini in ${Math.round(performance.now() - connectStartTime)}ms`);
 
       // Flush buffered audio
       if (this.audioQueue.length > 0) {
@@ -150,7 +151,7 @@ export class ServerLiveSession extends EventEmitter {
     }
   }
 
-  private async loadMemory(userId: string): Promise<string> {
+  private async loadMemory(userId: string, sessionId?: string): Promise<string> {
     try {
       // Execute Long-term and Short-term memory fetch in parallel
       const [longTermResults, session] = await Promise.all([
@@ -184,7 +185,7 @@ export class ServerLiveSession extends EventEmitter {
       const shortTermHistory = events
         .map((e) => {
           if (e.type === 'user-message') return `User: ${e.text}`;
-          if (e.type === 'model-response') return `Claris: ${e.text}`;
+          if (e.type === 'model-response') return `${this.naviName}: ${e.text}`;
           return null;
         })
         .filter(Boolean)
@@ -319,7 +320,7 @@ export class ServerLiveSession extends EventEmitter {
         console.log(`💾 Saving ${this.eventsBuffer.length} events to Firestore...`);
         const session: Session = {
           id: this.currentSessionId,
-          appName: 'claris',
+          appName: this.naviName,
           userId: this.currentUserId,
           state: {},
           events: [],
@@ -333,7 +334,7 @@ export class ServerLiveSession extends EventEmitter {
 
         // 2. 要約の生成と保存（長期記憶）
         const fullText = this.eventsBuffer
-          .map((e) => (e.type === 'user-message' ? `User: ${e.text}` : `Claris: ${e.text}`))
+          .map((e) => (e.type === 'user-message' ? `User: ${e.text}` : `${this.naviName}: ${e.text}`))
           .join('\n');
 
         if (fullText.length > 50) {

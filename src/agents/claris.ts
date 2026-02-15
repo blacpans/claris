@@ -53,9 +53,10 @@ export async function createClarisAgent(context?: ClarisContext) {
   const config = await loadConfig();
   const modelName = getModelName(config.rapid);
   const mode = context?.mode || 'chat';
-  // GitHub Webhook経由（reviewモード）の時は環境変数の名前（GitHubボット名）を、
-  // それ以外（Live Chatなど）の時は常に「Claris」を自認するように切り替えるじゃんね！✨💎
-  const agentName = mode === 'review' ? process.env.CLARIS_NAME || 'Claris' : 'Claris';
+
+  const botName = process.env.BOT_NAME || 'claris-bot';
+  const naviName = process.env.NAVI_NAME || 'Claris';
+  const agentName = mode === 'review' ? botName : naviName;
 
   const model = new Gemini({
     model: modelName,

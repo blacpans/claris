@@ -10,9 +10,10 @@ import { serve } from '@hono/node-server';
 import { app } from '@/runtime/server.js';
 import { setupWebSocket } from '@/runtime/websocket.js';
 
+const NAVI_NAME = process.env.NAVI_NAME || 'Claris';
 const PORT = Number(process.env.PORT) || 8080;
 
-console.log('🌸 Claris is starting up...');
+console.log(`🌸 ${NAVI_NAME} is starting up...`);
 
 const server = serve(
   {
@@ -21,7 +22,7 @@ const server = serve(
     hostname: '0.0.0.0', // IPv4での接続を確実に許可
   },
   (info) => {
-    console.log(`✨ Claris is listening on http://${info.address}:${info.port}`);
+    console.log(`✨ ${NAVI_NAME} is listening on http://${info.address}:${info.port}`);
   },
 );
 

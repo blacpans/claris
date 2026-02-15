@@ -45,11 +45,15 @@ export function setupWebSocket(server: Server) {
   wss.on('connection', (ws: WebSocket, req) => {
     console.log('📱 Client connected to WebSocket');
 
-    // クエリパラメータから userId, activeFile を取得
+    // クエリパラメータから userId, sessionId, activeFile を取得
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const userId = url.searchParams.get('userId') || 'anonymous';
+    const sessionId = url.searchParams.get('sessionId') || undefined;
     const activeFile = url.searchParams.get('activeFile') || undefined;
-    console.log(`👤 Connected user: ${userId}, Active File: ${activeFile || 'none'}`);
+    const location = url.searchParams.get('location') || undefined;
+    console.log(
+      `👤 Connected user: ${userId}, Session: ${sessionId || 'new'}, Active File: ${activeFile || 'none'}, Location: ${location || 'unknown'}`,
+    );
 
     // プロアクティブ通知のために WebSocket 接続を登録
     notificationService.register(userId, ws);
@@ -70,8 +74,6 @@ export function setupWebSocket(server: Server) {
         await liveSession.sendAudio(data as Buffer);
       } else {
         // Text message (control commands etc)
-        const _message = data.toString();
-        // console.log('📩 Received message:', message);
       }
     });
 

@@ -5,13 +5,13 @@ import { eventCollector } from '@/core/proactive/index.js';
 import { FirestoreSessionService } from '@/sessions/firestoreSession.js';
 import { getGmailClient } from '@/tools/google/auth.js';
 
-const APP_NAME = 'claris';
-
 export class AdkRunnerService {
   private readonly sessionService: FirestoreSessionService;
   private pubsubListener: PubSubListener | null = null;
+  private readonly appName: string;
 
   constructor() {
+    this.appName = process.env.CLARIS_NAME || 'Claris';
     this.sessionService = new FirestoreSessionService({
       collectionName: process.env.FIRESTORE_COLLECTION || 'claris-sessions',
     });
@@ -93,22 +93,22 @@ export class AdkRunnerService {
       activeFile?: string;
       mode?: 'chat' | 'review' | string;
       diff?: string;
+      location?: string;
     };
   }): Promise<string> {
-    // 毎回設定を読み込むことで、ナビカスの調整を即時反映する
-    // Context を渡して適切なソウルを共鳴させる
+    console.log(`🏃 [Runner] Run called for user: ${options.userId}, session: ${options.sessionId}`);
     const agent = await createClarisAgent(options.context);
 
     // Ensure session exists
     let session = await this.sessionService.getSession({
-      appName: APP_NAME,
+      appName: this.appName,
       userId: options.userId,
       sessionId: options.sessionId,
     });
 
     if (!session) {
       session = await this.sessionService.createSession({
-        appName: APP_NAME,
+        appName: this.appName,
         userId: options.userId,
         sessionId: options.sessionId,
       });
@@ -117,12 +117,10 @@ export class AdkRunnerService {
     // Create runner with our session service
     const runner = new InMemoryRunner({
       agent,
-      appName: APP_NAME,
+      appName: this.appName,
     });
 
-    // 📝 Ephemeral State: Prepare state for InMemoryRunner
-    // We inject the diff here so it's available for ${diff} substitution,
-    // but we do NOT save it to Firestore, ensuring it remains truly ephemeral.
+    // Ephemeral State 準備
     let runnerState = session.state;
     if (options.context?.diff) {
       runnerState = {
@@ -131,9 +129,8 @@ export class AdkRunnerService {
       };
     }
 
-    // Initialize session in the InMemoryRunner with our state
-    await runner.sessionService.createSession({
-      appName: APP_NAME,
+    const runnerSession = await runner.sessionService.createSession({
+      appName: this.appName,
       userId: options.userId,
       sessionId: options.sessionId,
       state: runnerState,
@@ -144,7 +141,7 @@ export class AdkRunnerService {
       console.log(`[Runner] Injecting ${session.events.length} historical events into runner session.`);
       for (const event of session.events) {
         await runner.sessionService.appendEvent({
-          session,
+          session: runnerSession,
           event,
         });
       }
@@ -163,8 +160,6 @@ export class AdkRunnerService {
     // Collect response content
     let responseText = '';
     const bufferedEvents: Event[] = [];
-
-    // Use a base time and counter to ensure unique timestamps even in high-speed loops
     const baseTime = Date.now();
     let eventIndex = 0;
 
@@ -172,8 +167,9 @@ export class AdkRunnerService {
       let eventCount = 0;
       for await (const event of events) {
         eventCount++;
+        console.log(`[Runner] Event #${eventCount} Received. Author: "${event.author}"`);
+
         if (session) {
-          console.log(`[Runner] Event #${eventCount}: ${JSON.stringify(event)}`);
           if (!event.timestamp) {
             event.timestamp = baseTime + eventIndex++;
           }
@@ -181,29 +177,33 @@ export class AdkRunnerService {
         }
 
         // Extract text content from agent responses
-        if (event.author === agent.name && event.content?.parts) {
-          for (const part of event.content.parts) {
-            if ('text' in part && part.text) {
-              responseText += part.text;
-            }
+        // 非常におおらかな判定：Author が agent 名に一致するか、空か、 model/assistant の場合にテキストを拾うじゃんね！✨
+        const author = (event.author || '').toLowerCase();
+        const agentName = agent.name.toLowerCase();
+        const isAgent = !author || author === agentName;
+        console.log(`[Runner] isAgent: ${isAgent}, author: ${author}, agentName: ${agentName}`);
+
+        if (!isAgent || !event.content?.parts) {
+          continue;
+        }
+
+        console.log(`[Runner] event.content: ${event.content}`);
+        for (const part of event.content.parts) {
+          if ('text' in part && part.text) {
+            responseText += part.text;
           }
         }
       }
-      console.log(`[Runner] Finished loop. Total events: ${eventCount}, Total text length: ${responseText.length}`);
+      console.log(`🚀 [Runner] Generation loop finished. Text length: ${responseText.length}`);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Unknown error';
-      console.error(`[Runner] Error in generation loop: ${message}`, e);
-      throw e; // Webhook handler will catch this
+      console.error(`[Runner] Error in generation loop: ${e}`);
+      throw e;
     } finally {
-      // Ensure all events are persisted before returning (batched for performance and order consistency)
-      // Even if the loop fails, we save what we have buffered so far.
-      if (session) {
-        if (bufferedEvents.length > 0) {
-          await this.sessionService.appendEvents({
-            session,
-            events: bufferedEvents,
-          });
-        }
+      if (session && bufferedEvents.length > 0) {
+        await this.sessionService.appendEvents({
+          session,
+          events: bufferedEvents,
+        });
       }
     }
 
